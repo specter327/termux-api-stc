@@ -3,6 +3,7 @@
 from typing import Optional
 
 from .core import run_text
+from .core import run_text_async
 
 
 def open_file(
@@ -34,3 +35,36 @@ def open_url(
     if app_package_or_component is not None:
         args.append(app_package_or_component)
     return run_text("termux-open-url", args)
+
+# ==========
+# Asynchronous API
+# ==========
+async def open_file_async(
+    path_or_url: str,
+    content_type: Optional[str] = None,
+    action: str = "view",
+    chooser: bool = False,
+) -> Optional[str]:
+    """Abre o comparte un archivo/URL usando termux-open."""
+    if action not in {"view", "send"}:
+        raise ValueError("action debe ser 'view' o 'send'")
+
+    args = ["--{}".format(action)]
+    if content_type is not None:
+        args += ["--content-type", content_type]
+    if chooser:
+        args.append("--chooser")
+    args.append(path_or_url)
+
+    return await run_text_async("termux-open", args)
+
+
+async def open_url_async(
+    url: str,
+    app_package_or_component: Optional[str] = None,
+) -> Optional[str]:
+    """Abre una URL con la aplicacion predeterminada o una especifica."""
+    args = [url]
+    if app_package_or_component is not None:
+        args.append(app_package_or_component)
+    return await run_text_async("termux-open-url", args)

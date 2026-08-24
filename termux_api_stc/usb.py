@@ -3,6 +3,7 @@
 from typing import Any, Optional
 
 from .core import run, run_text
+from .core import run_async, run_text_async
 
 
 def list_devices() -> Any:
@@ -54,3 +55,39 @@ def _device_arguments(
         raise ValueError("Debes indicar device o vendor_id y product_id")
 
     return [str(vendor_id), str(product_id)]
+
+# ==========
+# Asynchronous API
+# ==========
+async def list_devices_async() -> Any:
+    """Lista los dispositivos USB disponibles."""
+    return await run_async("termux-usb", ["-l"])
+
+
+async def request_permission_async(
+    device: Optional[str] = None,
+    vendor_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+) -> Optional[str]:
+    """Solicita permiso para un dispositivo indicado por ruta o VID/PID."""
+    args = ["-r"] + _device_arguments(device, vendor_id, product_id)
+    return await run_text_async("termux-usb", args)
+
+
+async def open_device_async(
+    command: str,
+    device: Optional[str] = None,
+    vendor_id: Optional[int] = None,
+    product_id: Optional[int] = None,
+    request_permission_if_needed: bool = False,
+    export_fd: bool = False,
+) -> Optional[str]:
+    """Abre un USB y ejecuta un comando con su descriptor de archivo."""
+    args = []
+    if request_permission_if_needed:
+        args.append("-r")
+    if export_fd:
+        args.append("-E")
+    args += ["-e", command]
+    args += _device_arguments(device, vendor_id, product_id)
+    return await run_text_async("termux-usb", args)

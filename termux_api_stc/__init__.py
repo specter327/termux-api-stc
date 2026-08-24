@@ -48,6 +48,8 @@ from .core import (
     run_json_async,
     run_text,
     run_text_async,
+    stream_bytes_async,
+    stream_text_async,
 )
 from .exceptions import (
     TermuxAPICommandUnavailableError,
@@ -61,7 +63,7 @@ from .exceptions import (
     TermuxAPIUnsupportedError,
 )
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
 
 TERMUX_API_COMPATIBILITY = {
     "tested_against_termux_api_package": "0.59.1",
@@ -123,7 +125,8 @@ __all__ = [
     "TERMUX_API_COMPATIBILITY", "TERMUX_API_BINARIES", "TERMUX_TOOL_BINARIES",
     "available_apis", "available_tools", "is_available", "is_command_available",
     "run", "run_async", "run_bytes", "run_bytes_async", "run_json",
-    "run_json_async", "run_text", "run_text_async",
+    "run_json_async", "run_text", "run_text_async", "stream_bytes_async",
+    "stream_text_async",
     "TermuxAPIError", "TermuxAPICommandUnavailableError",
     "TermuxAPICompanionUnavailableError", "TermuxAPIExecutionError",
     "TermuxAPINotInstalledError", "TermuxAPIPermissionError",

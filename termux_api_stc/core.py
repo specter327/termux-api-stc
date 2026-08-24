@@ -4,7 +4,7 @@ import asyncio
 import json
 import shutil
 import subprocess
-from typing import Any, List, Optional, Union
+from typing import Any, AsyncIterator, List, Optional, Union
 
 from .exceptions import (
     TermuxAPICommandUnavailableError,
@@ -297,3 +297,152 @@ async def run_async(
         return json.loads(output)
     except json.JSONDecodeError:
         return output
+
+async def stream_bytes_async(
+    binary: str,
+    args: Optional[List[str]] = None,
+    input_data: InputData = None,
+    chunk_size: int = 4096,
+) -> AsyncIterator[bytes]:
+    """Transmite stdout binario incrementalmente sin bloquear el event loop."""
+    if chunk_size < 1:
+        raise ValueError("chunk_size debe ser >= 1")
+
+    _require_command(binary)
+    command = [binary] + (args or [])
+
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdin=asyncio.subprocess.PIPE if input_data is not None else None,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        await process.wait()
+        raise TermuxAPIProtocolError(
+            "No fue posible abrir los canales del proceso '{}'".format(binary)
+        )
+
+    if input_data is not None and process.stdin is not None:
+        process.stdin.write(_normalize_input(input_data) or b"")
+        await process.stdin.drain()
+        process.stdin.close()
+
+    stderr_task = asyncio.create_task(process.stderr.read())
+
+    try:
+        while True:
+            chunk = await process.stdout.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+
+        return_code = await process.wait()
+        stderr = await stderr_task
+
+        if return_code != 0:
+            raise TermuxAPIExecutionError(
+                command,
+                int(return_code),
+                stderr or b"",
+            )
+    except asyncio.CancelledError:
+        if process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+
+        if not stderr_task.done():
+            stderr_task.cancel()
+
+        raise
+    finally:
+        if process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+
+        if not stderr_task.done():
+            stderr_task.cancel()
+
+
+async def stream_text_async(
+    binary: str,
+    args: Optional[List[str]] = None,
+    input_data: InputData = None,
+    encoding: str = "utf-8",
+) -> AsyncIterator[str]:
+    """Transmite stdout incrementalmente por lineas de texto."""
+    _require_command(binary)
+    command = [binary] + (args or [])
+
+    process = await asyncio.create_subprocess_exec(
+        *command,
+        stdin=asyncio.subprocess.PIPE if input_data is not None else None,
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+
+    if process.stdout is None or process.stderr is None:
+        process.kill()
+        await process.wait()
+        raise TermuxAPIProtocolError(
+            "No fue posible abrir los canales del proceso '{}'".format(binary)
+        )
+
+    if input_data is not None and process.stdin is not None:
+        process.stdin.write(_normalize_input(input_data) or b"")
+        await process.stdin.drain()
+        process.stdin.close()
+
+    stderr_task = asyncio.create_task(process.stderr.read())
+
+    try:
+        while True:
+            line = await process.stdout.readline()
+            if not line:
+                break
+            yield line.decode(encoding, errors="replace").rstrip("\r\n")
+
+        return_code = await process.wait()
+        stderr = await stderr_task
+
+        if return_code != 0:
+            raise TermuxAPIExecutionError(
+                command,
+                int(return_code),
+                stderr or b"",
+            )
+    except asyncio.CancelledError:
+        if process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+
+        if not stderr_task.done():
+            stderr_task.cancel()
+
+        raise
+    finally:
+        if process.returncode is None:
+            process.terminate()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=2.0)
+            except asyncio.TimeoutError:
+                process.kill()
+                await process.wait()
+
+        if not stderr_task.done():
+            stderr_task.cancel()
+

@@ -26,7 +26,7 @@ Destinations:
 Important:
     - This script does NOT change the project version.
     - PyPI does not allow replacing an already published version.
-      Use upgrade.sh with a new version instead.
+      Increment the project version before publishing a replacement release.
 USAGE
 }
 

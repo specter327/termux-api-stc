@@ -3,6 +3,7 @@
 from typing import Any, Optional
 
 from .core import run
+from .core import run_async
 
 _VALID_READ_MODES = {"short", "full"}
 
@@ -17,3 +18,17 @@ def read(detail: str = "short") -> Any:
 def write(text: str) -> Any:
     """Escribe texto en una etiqueta NDEF."""
     return run("termux-nfc", ["-w", "-t", text])
+
+# ==========
+# Asynchronous API
+# ==========
+async def read_async(detail: str = "short") -> Any:
+    """Lee una etiqueta NFC en modo short o full."""
+    if detail not in _VALID_READ_MODES:
+        raise ValueError("detail debe ser 'short' o 'full'")
+    return await run_async("termux-nfc", ["-r", detail])
+
+
+async def write_async(text: str) -> Any:
+    """Escribe texto en una etiqueta NDEF."""
+    return await run_async("termux-nfc", ["-w", "-t", text])
