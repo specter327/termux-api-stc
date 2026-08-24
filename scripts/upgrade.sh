@@ -1,173 +1,234 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_DIRECTORY="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-PROJECT_ROOT="$(cd -- "${SCRIPT_DIRECTORY}/.." && pwd)"
+# ==========
+# Constants definition
+# ==========
 
-PYPROJECT_FILE="${PROJECT_ROOT}/pyproject.toml"
-PACKAGE_INIT_FILE="${PROJECT_ROOT}/termux_api/__init__.py"
-PUBLISH_SCRIPT="${SCRIPT_DIRECTORY}/publish.sh"
+SCRIPT_DIRECTORY="$(
+    cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &&
+    pwd
+)"
+
+PROJECT_ROOT="$(
+    cd -- "${SCRIPT_DIRECTORY}/.." &&
+    pwd
+)"
+
 PYPI_PROJECT_NAME="termux-api-stc"
+DEFAULT_TARGET="both"
+
+
+# ==========
+# Functions definition
+# ==========
 
 show_usage() {
-    cat <<'USAGE'
+    cat <<'EOF'
 Usage:
-    ./scripts/upgrade.sh VERSION github [commit-message]
-    ./scripts/upgrade.sh VERSION pypi
-    ./scripts/upgrade.sh VERSION both [commit-message]
+    ./scripts/upgrade.sh
+    ./scripts/upgrade.sh github
+    ./scripts/upgrade.sh pypi
+    ./scripts/upgrade.sh both
+
+Targets:
+    github  Update the local Git repository from its remote GitHub origin.
+    pypi    Upgrade the locally installed termux-api-stc package from PyPI.
+    both    Update both the Git repository and the installed PyPI package.
+
+Default:
+    both
 
 Examples:
-    ./scripts/upgrade.sh 2.1.0 github
-    ./scripts/upgrade.sh 2.1.0 pypi
-    ./scripts/upgrade.sh 2.1.0 both
-    ./scripts/upgrade.sh 2.1.0 both "Release termux-api-stc 2.1.0"
+    ./scripts/upgrade.sh
+    ./scripts/upgrade.sh github
+    ./scripts/upgrade.sh pypi
+    ./scripts/upgrade.sh both
 
-Behavior:
-    1. Validates VERSION.
-    2. Updates [project].version in pyproject.toml.
-    3. Updates __version__ in termux_api/__init__.py.
-    4. Validates the Python package.
-    5. Delegates publication to scripts/publish.sh.
-USAGE
+This script DOES NOT publish releases and DOES NOT change the project version.
+It only upgrades the local environment from the already published sources.
+EOF
 }
+
 
 fail() {
     printf 'ERROR: %s\n' "$*" >&2
     exit 1
 }
 
+
 require_command() {
     local command_name="$1"
-    command -v "$command_name" >/dev/null 2>&1 || fail "Required command not found: $command_name"
+
+    command -v "${command_name}" >/dev/null 2>&1 || \
+        fail "Required command not found: ${command_name}"
 }
 
-validate_version() {
-    local version="$1"
-    python3 - "$version" <<'PY'
-import re
+
+query_local_git_version() {
+    git -C "${PROJECT_ROOT}" \
+        describe \
+        --tags \
+        --always \
+        --dirty 2>/dev/null || true
+}
+
+
+query_installed_pypi_version() {
+    python3 - "${PYPI_PROJECT_NAME}" <<'PY'
+from importlib.metadata import PackageNotFoundError, version
 import sys
 
-version = sys.argv[1]
-pattern = re.compile(r'^[0-9]+(?:\.[0-9]+){2}(?:(?:a|b|rc)[0-9]+|\.post[0-9]+|\.dev[0-9]+)?$')
-if pattern.fullmatch(version) is None:
-    raise SystemExit(
-        "Invalid version. Examples: 2.1.0, 2.1.0a1, 2.1.0b1, "
-        "2.1.0rc1, 2.1.0.post1, 2.1.0.dev1"
-    )
+package_name = sys.argv[1]
+
+try:
+    print(version(package_name))
+except PackageNotFoundError:
+    print("not-installed")
 PY
 }
 
-read_project_field() {
-    local field="$1"
-    python3 - "$PYPROJECT_FILE" "$field" <<'PY'
-from pathlib import Path
-import re
-import sys
 
-path = Path(sys.argv[1])
-field = sys.argv[2]
-text = path.read_text(encoding="utf-8")
-match = re.search(rf'(?ms)^\[project\].*?^{re.escape(field)}\s*=\s*"([^"]+)"', text)
-if match is None:
-    raise SystemExit(f"Unable to read [project].{field} from pyproject.toml")
-print(match.group(1))
-PY
+validate_git_repository() {
+    require_command git
+
+    git -C "${PROJECT_ROOT}" \
+        rev-parse \
+        --is-inside-work-tree >/dev/null 2>&1 || \
+        fail "${PROJECT_ROOT} is not a Git repository."
+
+    git -C "${PROJECT_ROOT}" \
+        remote \
+        get-url \
+        origin >/dev/null 2>&1 || \
+        fail "Git remote 'origin' is not configured."
 }
 
-write_version() {
-    local version="$1"
-    python3 - "$PYPROJECT_FILE" "$PACKAGE_INIT_FILE" "$version" <<'PY'
-from pathlib import Path
-import re
-import sys
 
-pyproject_path = Path(sys.argv[1])
-init_path = Path(sys.argv[2])
-version = sys.argv[3]
-
-pyproject_text = pyproject_path.read_text(encoding="utf-8")
-updated_pyproject, count = re.subn(
-    r'(?ms)(^\[project\].*?^version\s*=\s*")[^"]+(")',
-    rf'\g<1>{version}\g<2>',
-    pyproject_text,
-    count=1,
-)
-if count != 1:
-    raise SystemExit("Unable to update [project].version in pyproject.toml")
-
-init_text = init_path.read_text(encoding="utf-8")
-updated_init, count = re.subn(
-    r'^__version__\s*=\s*["\'][^"\']+["\']',
-    f'__version__ = "{version}"',
-    init_text,
-    count=1,
-    flags=re.MULTILINE,
-)
-if count != 1:
-    raise SystemExit("Unable to update __version__ in termux_api/__init__.py")
-
-pyproject_path.write_text(updated_pyproject, encoding="utf-8")
-init_path.write_text(updated_init, encoding="utf-8")
-PY
+validate_clean_worktree() {
+    if [[ -n "$(
+        git -C "${PROJECT_ROOT}" \
+            status \
+            --porcelain
+    )" ]]; then
+        fail \
+            "The Git working tree contains local changes. " \
+            "Commit, stash, or discard them before upgrading."
+    fi
 }
 
-if [[ $# -lt 2 || $# -gt 3 ]]; then
+
+upgrade_github() {
+    local branch
+    local before_version
+    local after_version
+
+    validate_git_repository
+    validate_clean_worktree
+
+    branch="$(
+        git -C "${PROJECT_ROOT}" \
+            branch \
+            --show-current
+    )"
+
+    [[ -n "${branch}" ]] || \
+        fail "Detached HEAD is not supported."
+
+    before_version="$(query_local_git_version)"
+
+    printf '\n'
+    printf 'GitHub repository upgrade\n'
+    printf '  Root:   %s\n' "${PROJECT_ROOT}"
+    printf '  Branch: %s\n' "${branch}"
+    printf '  Before: %s\n' "${before_version:-unknown}"
+
+    git -C "${PROJECT_ROOT}" \
+        fetch \
+        --prune \
+        origin
+
+    git -C "${PROJECT_ROOT}" \
+        pull \
+        --ff-only \
+        origin \
+        "${branch}"
+
+    git -C "${PROJECT_ROOT}" \
+        fetch \
+        --tags \
+        --force \
+        origin
+
+    after_version="$(query_local_git_version)"
+
+    printf '  After:  %s\n' "${after_version:-unknown}"
+}
+
+
+upgrade_pypi() {
+    local before_version
+    local after_version
+
+    require_command python3
+
+    before_version="$(query_installed_pypi_version)"
+
+    printf '\n'
+    printf 'PyPI package upgrade\n'
+    printf '  Package: %s\n' "${PYPI_PROJECT_NAME}"
+    printf '  Before:  %s\n' "${before_version}"
+
+    python3 -m pip install \
+        --upgrade \
+        "${PYPI_PROJECT_NAME}"
+
+    after_version="$(query_installed_pypi_version)"
+
+    printf '  After:   %s\n' "${after_version}"
+}
+
+
+# ==========
+# Entry point
+# ==========
+
+if [[ $# -gt 1 ]]; then
     show_usage
     exit 2
 fi
 
-require_command python3
+TARGET="${1:-${DEFAULT_TARGET}}"
 
-VERSION="$1"
-TARGET="$2"
-COMMIT_MESSAGE="${3:-Release termux-api-stc $VERSION}"
-
-case "$TARGET" in
-    github|pypi|both) ;;
-    *) show_usage; fail "Unknown destination: $TARGET" ;;
+case "${TARGET}" in
+    github|pypi|both)
+        ;;
+    -h|--help|help)
+        show_usage
+        exit 0
+        ;;
+    *)
+        show_usage
+        fail "Unknown target: ${TARGET}"
+        ;;
 esac
 
-validate_version "$VERSION"
+printf 'termux-api-stc local upgrade\n'
+printf 'Target: %s\n' "${TARGET}"
 
-[[ -f "$PYPROJECT_FILE" ]] || fail "Missing $PYPROJECT_FILE"
-[[ -f "$PACKAGE_INIT_FILE" ]] || fail "Missing $PACKAGE_INIT_FILE"
-[[ -x "$PUBLISH_SCRIPT" ]] || fail "$PUBLISH_SCRIPT does not exist or is not executable."
+case "${TARGET}" in
+    github)
+        upgrade_github
+        ;;
 
-PROJECT_NAME="$(read_project_field name)"
-[[ "$PROJECT_NAME" == "$PYPI_PROJECT_NAME" ]] || \
-    fail "pyproject.toml must contain [project].name = \"$PYPI_PROJECT_NAME\". Current value: \"$PROJECT_NAME\""
+    pypi)
+        upgrade_pypi
+        ;;
 
-CURRENT_VERSION="$(read_project_field version)"
-[[ "$CURRENT_VERSION" != "$VERSION" ]] || fail "Project is already at version $VERSION."
+    both)
+        upgrade_github
+        upgrade_pypi
+        ;;
+esac
 
-BACKUP_DIRECTORY="$(mktemp -d)"
-cp -- "$PYPROJECT_FILE" "$BACKUP_DIRECTORY/pyproject.toml"
-cp -- "$PACKAGE_INIT_FILE" "$BACKUP_DIRECTORY/__init__.py"
-
-cleanup_backup() {
-    rm -rf "$BACKUP_DIRECTORY"
-}
-
-restore_versions() {
-    cp -- "$BACKUP_DIRECTORY/pyproject.toml" "$PYPROJECT_FILE"
-    cp -- "$BACKUP_DIRECTORY/__init__.py" "$PACKAGE_INIT_FILE"
-}
-
-handle_error() {
-    local exit_code=$?
-    printf 'Upgrade failed. Restoring version files.\n' >&2
-    restore_versions
-    cleanup_backup
-    exit "$exit_code"
-}
-
-trap handle_error ERR
-trap cleanup_backup EXIT
-
-write_version "$VERSION"
-python3 -m compileall -q "${PROJECT_ROOT}/termux_api"
-
-"$PUBLISH_SCRIPT" "$TARGET" "$COMMIT_MESSAGE"
-
-trap - ERR
-printf 'Upgrade completed successfully: %s -> %s\n' "$CURRENT_VERSION" "$VERSION"
+printf '\nUpgrade completed successfully.\n'
