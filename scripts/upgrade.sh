@@ -181,7 +181,7 @@ upgrade_pypi() {
 
     python3 -m pip install \
         --upgrade \
-        "${PYPI_PROJECT_NAME}"
+        "${PYPI_PROJECT_NAME}" --break-system-packages
 
     after_version="$(query_installed_pypi_version)"
 
