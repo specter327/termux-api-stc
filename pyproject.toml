@@ -1,13 +1,38 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=69", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "termux-api-stc"
-version = "2.1.0"
-description = "Wrapper Python de Termux:API y utilidades Termux relacionadas"
-requires-python = ">=3.7"
+version = "3.0.0a2"
+description = "Strict Python consumer of the pinned official Termux:API command interface"
+readme = "README.md"
+requires-python = ">=3.10"
 license = { text = "MIT" }
+keywords = ["termux", "android", "termux-api", "python"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Operating System :: Android",
+  "Topic :: Software Development :: Libraries :: Python Modules",
+]
 
-[tool.setuptools]
-packages = ["termux_api_stc"]
+[project.urls]
+Homepage = "https://pypi.org/project/termux-api-stc/"
+Repository = "https://github.com/specter327/termux-api-stc"
+
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.setuptools.packages.find]
+include = ["termux_api_stc*"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests/unit-test", "tests/device"]
+markers = [
+  "device: requires a real Termux/Android environment",
+  "conformance: compares library behavior against real Termux command behavior",
+  "interactive: requires human/device interaction",
+  "side_effect: changes device state or sends/creates something",
+]

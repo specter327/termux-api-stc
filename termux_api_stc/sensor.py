@@ -1,145 +1,64 @@
-"""Wrapper de `termux-sensor`."""
+from __future__ import annotations
+from collections.abc import Sequence
+from .core.command import Command
+from .core.models import ExecutionResult
 
-from typing import Any, List, Optional
-
-from .core import run, run_text
-from .core import run_async, run_text_async
-from .core import stream_text_async
-
-
-def list_sensors() -> Any:
-    """Lista todos los sensores disponibles."""
-    return run("termux-sensor", ["-l"])
+_COMMAND = Command("termux-sensor")
 
 
-def read(
-    sensors: List[str],
-    delay_ms: Optional[int] = None,
-    limit: Optional[int] = None,
-) -> Any:
-    """Lee uno o mas sensores seleccionados."""
-    if not sensors:
-        raise ValueError("sensors no puede estar vacio")
+def list_available(*, timeout: float | None = 15.0):
+    return _COMMAND.json("-l", timeout=timeout)
 
-    args = ["-s", ",".join(sensors)]
+
+async def list_available_async(*, timeout: float | None = 15.0):
+    return await _COMMAND.json_async("-l", timeout=timeout)
+
+
+def cleanup(*, timeout: float | None = 15.0) -> ExecutionResult:
+    return _COMMAND.result("-c", timeout=timeout)
+
+
+async def cleanup_async(*, timeout: float | None = 15.0) -> ExecutionResult:
+    return await _COMMAND.result_async("-c", timeout=timeout)
+
+
+def _selection_args(*, sensors: str | Sequence[str] | None, all_sensors: bool, delay_ms: int | None, limit: int | None) -> tuple[str, ...]:
+    if all_sensors and sensors is not None:
+        raise ValueError("all_sensors and sensors are mutually exclusive")
+    if not all_sensors and sensors is None:
+        raise ValueError("select sensors or set all_sensors=True")
+    args: list[str] = []
+    if all_sensors:
+        args.append("-a")
+    else:
+        if isinstance(sensors, str):
+            selected = sensors
+        else:
+            selected = ",".join(sensors or ())
+        if not selected:
+            raise ValueError("sensors selection must not be empty")
+        args.extend(("-s", selected))
     if delay_ms is not None:
-        args += ["-d", str(delay_ms)]
+        if isinstance(delay_ms, bool) or not isinstance(delay_ms, int) or delay_ms < 0:
+            raise ValueError("delay_ms must be a non-negative integer")
+        args.extend(("-d", str(delay_ms)))
     if limit is not None:
-        if limit < 1:
-            raise ValueError("limit debe ser >= 1")
-        args += ["-n", str(limit)]
-
-    return run(
-        "termux-sensor",
-        args,
-        timeout=None if limit is None else 60,
-    )
+        if isinstance(limit, bool) or not isinstance(limit, int) or limit < 1:
+            raise ValueError("limit must be an integer >= 1")
+        args.extend(("-n", str(limit)))
+    return tuple(args)
 
 
-def read_all(
-    delay_ms: Optional[int] = None,
-    limit: Optional[int] = None,
-) -> Any:
-    """Lee todos los sensores disponibles."""
-    args = ["-a"]
-    if delay_ms is not None:
-        args += ["-d", str(delay_ms)]
-    if limit is not None:
-        if limit < 1:
-            raise ValueError("limit debe ser >= 1")
-        args += ["-n", str(limit)]
-
-    return run(
-        "termux-sensor",
-        args,
-        timeout=None if limit is None else 60,
-    )
+def read_result(*, sensors: str | Sequence[str] | None = None, all_sensors: bool = False, delay_ms: int | None = None, limit: int = 1, timeout: float | None = 30.0) -> ExecutionResult:
+    args = _selection_args(sensors=sensors, all_sensors=all_sensors, delay_ms=delay_ms, limit=limit)
+    return _COMMAND.result(*args, timeout=timeout)
 
 
-def cleanup() -> Optional[str]:
-    """Libera listeners de sensores activos."""
-    return run_text("termux-sensor", ["-c"])
-
-# ==========
-# Asynchronous API
-# ==========
-async def list_sensors_async() -> Any:
-    """Lista todos los sensores disponibles."""
-    return await run_async("termux-sensor", ["-l"])
+async def read_result_async(*, sensors: str | Sequence[str] | None = None, all_sensors: bool = False, delay_ms: int | None = None, limit: int = 1, timeout: float | None = 30.0) -> ExecutionResult:
+    args = _selection_args(sensors=sensors, all_sensors=all_sensors, delay_ms=delay_ms, limit=limit)
+    return await _COMMAND.result_async(*args, timeout=timeout)
 
 
-async def read_async(
-    sensors: List[str],
-    delay_ms: Optional[int] = None,
-    limit: Optional[int] = None,
-) -> Any:
-    """Lee uno o mas sensores seleccionados."""
-    if not sensors:
-        raise ValueError("sensors no puede estar vacio")
-
-    args = ["-s", ",".join(sensors)]
-    if delay_ms is not None:
-        args += ["-d", str(delay_ms)]
-    if limit is not None:
-        if limit < 1:
-            raise ValueError("limit debe ser >= 1")
-        args += ["-n", str(limit)]
-
-    return await run_async(
-        "termux-sensor",
-        args,
-        timeout=None if limit is None else 60,
-    )
-
-
-async def read_all_async(
-    delay_ms: Optional[int] = None,
-    limit: Optional[int] = None,
-) -> Any:
-    """Lee todos los sensores disponibles."""
-    args = ["-a"]
-    if delay_ms is not None:
-        args += ["-d", str(delay_ms)]
-    if limit is not None:
-        if limit < 1:
-            raise ValueError("limit debe ser >= 1")
-        args += ["-n", str(limit)]
-
-    return await run_async(
-        "termux-sensor",
-        args,
-        timeout=None if limit is None else 60,
-    )
-
-
-async def cleanup_async() -> Optional[str]:
-    """Libera listeners de sensores activos."""
-    return await run_text_async("termux-sensor", ["-c"])
-
-async def stream(
-    sensors: List[str],
-    delay_ms: Optional[int] = None,
-):
-    """Transmite incrementalmente la salida de uno o mas sensores."""
-    if not sensors:
-        raise ValueError("sensors no puede estar vacio")
-
-    args = ["-s", ",".join(sensors)]
-    if delay_ms is not None:
-        args += ["-d", str(delay_ms)]
-
-    async for line in stream_text_async("termux-sensor", args):
-        yield line
-
-
-async def stream_all(
-    delay_ms: Optional[int] = None,
-):
-    """Transmite incrementalmente la salida de todos los sensores."""
-    args = ["-a"]
-    if delay_ms is not None:
-        args += ["-d", str(delay_ms)]
-
-    async for line in stream_text_async("termux-sensor", args):
-        yield line
-
+def stream_lines(*, sensors: str | Sequence[str] | None = None, all_sensors: bool = False, delay_ms: int | None = None, startup_timeout: float | None = 30.0):
+    args = _selection_args(sensors=sensors, all_sensors=all_sensors, delay_ms=delay_ms, limit=None)
+    return _COMMAND.stream_lines(*args, startup_timeout=startup_timeout)

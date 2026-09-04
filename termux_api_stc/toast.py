@@ -1,44 +1,26 @@
-"""Wrapper de `termux-toast`."""
-from typing import Optional
-from .core import run
-from .core import run_async
+from __future__ import annotations
+from .core.command import Command
+from .core.models import ExecutionResult
+
+_COMMAND = Command("termux-toast")
 
 
-def show(text: str, background: Optional[str] = None, text_color: Optional[str] = None,
-          gravity: Optional[str] = None, short: bool = False):
-    """
-    Wraps `termux-toast [-b background] [-c textcolor] [-g gravity] [-s] text`.
-    :param gravity: 'top', 'middle' o 'bottom'
-    """
-    args = []
-    if background is not None:
-        args += ["-b", background]
-    if text_color is not None:
-        args += ["-c", text_color]
-    if gravity is not None:
-        args += ["-g", gravity]
+def _args(*, background: str | None, color: str | None, gravity: str | None, short: bool) -> tuple[str, ...]:
+    args: list[str] = []
     if short:
         args.append("-s")
-    args.append(text)
-    return run("termux-toast", args, parse_json=False)
-
-# ==========
-# Asynchronous API
-# ==========
-async def show_async(text: str, background: Optional[str] = None, text_color: Optional[str] = None,
-          gravity: Optional[str] = None, short: bool = False):
-    """
-    Wraps `termux-toast [-b background] [-c textcolor] [-g gravity] [-s] text`.
-    :param gravity: 'top', 'middle' o 'bottom'
-    """
-    args = []
+    if color is not None:
+        args.extend(("-c", color))
     if background is not None:
-        args += ["-b", background]
-    if text_color is not None:
-        args += ["-c", text_color]
+        args.extend(("-b", background))
     if gravity is not None:
-        args += ["-g", gravity]
-    if short:
-        args.append("-s")
-    args.append(text)
-    return await run_async("termux-toast", args, parse_json=False)
+        args.extend(("-g", gravity))
+    return tuple(args)
+
+
+def show(text: str, *, background: str | None = None, color: str | None = None, gravity: str | None = None, short: bool = False, timeout: float | None = 15.0) -> ExecutionResult:
+    return _COMMAND.result(*_args(background=background, color=color, gravity=gravity, short=short), input=text.encode("utf-8"), timeout=timeout)
+
+
+async def show_async(text: str, *, background: str | None = None, color: str | None = None, gravity: str | None = None, short: bool = False, timeout: float | None = 15.0) -> ExecutionResult:
+    return await _COMMAND.result_async(*_args(background=background, color=color, gravity=gravity, short=short), input=text.encode("utf-8"), timeout=timeout)

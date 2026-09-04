@@ -1,32 +1,29 @@
-"""Wrapper de `termux-call-log`."""
-from typing import Optional
-from .core import run
-from .core import run_async
+from __future__ import annotations
+from .core.command import Command
+from .core.models import ExecutionResult
+
+_COMMAND = Command("termux-call-log")
 
 
-def call_log(limit: Optional[int] = None, offset: Optional[int] = None):
-    """
-    Wraps `termux-call-log [-l limit] [-o offset]`.
-    Devuelve una lista de entradas del registro de llamadas.
-    """
-    args = []
-    if limit is not None:
-        args += ["-l", str(limit)]
-    if offset is not None:
-        args += ["-o", str(offset)]
-    return run("termux-call-log", args)
+def _args(limit: int, offset: int) -> tuple[str, ...]:
+    if isinstance(limit, bool) or not isinstance(limit, int) or limit < 0:
+        raise ValueError("limit must be a non-negative integer")
+    if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+        raise ValueError("offset must be a non-negative integer")
+    return ("-l", str(limit), "-o", str(offset))
 
-# ==========
-# Asynchronous API
-# ==========
-async def call_log_async(limit: Optional[int] = None, offset: Optional[int] = None):
-    """
-    Wraps `termux-call-log [-l limit] [-o offset]`.
-    Devuelve una lista de entradas del registro de llamadas.
-    """
-    args = []
-    if limit is not None:
-        args += ["-l", str(limit)]
-    if offset is not None:
-        args += ["-o", str(offset)]
-    return await run_async("termux-call-log", args)
+
+def query(*, limit: int = 10, offset: int = 0, timeout: float | None = 15.0) -> ExecutionResult:
+    return _COMMAND.result(*_args(limit, offset), timeout=timeout)
+
+
+async def query_async(*, limit: int = 10, offset: int = 0, timeout: float | None = 15.0) -> ExecutionResult:
+    return await _COMMAND.result_async(*_args(limit, offset), timeout=timeout)
+
+
+def query_json(*, limit: int = 10, offset: int = 0, timeout: float | None = 15.0):
+    return _COMMAND.json(*_args(limit, offset), timeout=timeout)
+
+
+async def query_json_async(*, limit: int = 10, offset: int = 0, timeout: float | None = 15.0):
+    return await _COMMAND.json_async(*_args(limit, offset), timeout=timeout)

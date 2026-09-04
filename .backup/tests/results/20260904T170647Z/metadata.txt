@@ -1,0 +1,91 @@
+
+===============================================================================
+TERMUX-API-STC UNIT-TEST CAMPAIGN
+===============================================================================
+runner_version=1
+timestamp_utc=20260904T170647Z
+started_utc=2026-09-04T17:06:47Z
+project_root=/home/specter/Escritorio/termux-api-stc
+tests_directory=/home/specter/Escritorio/termux-api-stc/tests
+unit_test_directory=/home/specter/Escritorio/termux-api-stc/tests/unit-test
+results_directory=/home/specter/Escritorio/termux-api-stc/tests/results/20260904T170647Z
+test_count=11
+
+
+===============================================================================
+GIT
+===============================================================================
+git_commit=2c9e14a974892e95712911bde645aced5b1de545
+git_branch=main
+git_tree=dirty
+
+[git status --short]
+ M .gitignore
+ M pyproject.toml
+ D scripts/publish.sh
+ D scripts/upgrade.sh
+ M termux_api_stc/__init__.py
+ M termux_api_stc/audio.py
+ M termux_api_stc/battery.py
+ D termux_api_stc/brightness.py
+ D termux_api_stc/call_log.py
+ M termux_api_stc/camera.py
+ M termux_api_stc/clipboard.py
+ D termux_api_stc/contacts.py
+ D termux_api_stc/core.py
+ D termux_api_stc/dialog.py
+ D termux_api_stc/download.py
+ D termux_api_stc/exceptions.py
+ D termux_api_stc/fingerprint.py
+ D termux_api_stc/infrared.py
+ D termux_api_stc/job_scheduler.py
+ D termux_api_stc/keystore.py
+ M termux_api_stc/location.py
+ D termux_api_stc/media_player.py
+ D termux_api_stc/media_scanner.py
+ D termux_api_stc/microphone.py
+ D termux_api_stc/nfc.py
+ D termux_api_stc/notification.py
+ D termux_api_stc/opener.py
+ D termux_api_stc/saf.py
+ D termux_api_stc/sensor.py
+ D termux_api_stc/share.py
+ D termux_api_stc/sms.py
+ D termux_api_stc/speech_to_text.py
+ D termux_api_stc/storage.py
+ M termux_api_stc/telephony.py
+ D termux_api_stc/toast.py
+ M termux_api_stc/torch.py
+ M termux_api_stc/tts.py
+ D termux_api_stc/usb.py
+ M termux_api_stc/vibrate.py
+ M termux_api_stc/volume.py
+ D termux_api_stc/wallpaper.py
+ M termux_api_stc/wifi.py
+ D tests/full_test.py
+?? README.md
+?? library.md
+?? requirements.txt
+?? scripts/install.py
+?? scripts/publish.py
+?? scripts/uninstall.py
+?? scripts/upgrade.py
+?? scripts/verification.py
+?? specification.md
+?? termux_api_stc/api.py
+?? termux_api_stc/core/
+?? termux_api_stc/environment.py
+?? termux_api_stc/official.py
+?? termux_api_stc/raw.py
+?? tests/README.md
+?? tests/run-tests.sh
+?? tests/unit-test/
+
+
+===============================================================================
+CAMPAIGN COMPLETION
+===============================================================================
+completed_utc=2026-09-04T17:06:52Z
+duration_seconds=1
+status=FAIL
+exit_code=1

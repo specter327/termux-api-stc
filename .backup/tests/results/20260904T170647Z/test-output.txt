@@ -1,0 +1,201 @@
+
+===============================================================================
+TERMUX-API-STC UNIT-TEST EXECUTION
+===============================================================================
+started_utc=2026-09-04T17:06:51Z
+python=UNKNOWN
+test_count=11
+
+
+===============================================================================
+TEST: conftest.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/conftest.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/conftest.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_api_registry.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_api_registry.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_api_registry.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_command_facade.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_command_facade.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_command_facade.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_executor_async.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_executor_async.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_executor_async.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_executor_parse.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_executor_parse.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_executor_parse.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_executor_sync.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_executor_sync.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_executor_sync.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_location_contract.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_location_contract.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_location_contract.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_official_commands_parameterized.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_official_commands_parameterized.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_official_commands_parameterized.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_official_inventory.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_official_inventory.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_official_inventory.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:51Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_public_surface.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_public_surface.py
+started_utc=2026-09-04T17:06:51Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_public_surface.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:52Z
+duration_seconds=1
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+TEST: test_streaming.py
+===============================================================================
+file=/home/specter/Escritorio/termux-api-stc/tests/unit-test/test_streaming.py
+started_utc=2026-09-04T17:06:52Z
+command=python /home/specter/Escritorio/termux-api-stc/tests/unit-test/test_streaming.py
+
+ERROR: python executable not found.
+
+completed_utc=2026-09-04T17:06:52Z
+duration_seconds=0
+exit_code=127
+status=FAIL
+
+
+===============================================================================
+CAMPAIGN SUMMARY
+===============================================================================
+started_utc=20260904T170647Z
+completed_utc=2026-09-04T17:06:52Z
+duration_seconds=1
+
+total=11
+passed=0
+failed=11
+errors=0
+status=FAIL
+exit_code=1
+
+STATUS    TEST                                              EXIT_CODE  SECONDS   
+--------  ------------------------------------------------  ---------  ----------
+FAIL      conftest.py                                       127        0         
+FAIL      test_api_registry.py                              127        0         
+FAIL      test_command_facade.py                            127        0         
+FAIL      test_executor_async.py                            127        0         
+FAIL      test_executor_parse.py                            127        0         
+FAIL      test_executor_sync.py                             127        0         
+FAIL      test_location_contract.py                         127        0         
+FAIL      test_official_commands_parameterized.py           127        0         
+FAIL      test_official_inventory.py                        127        0         
+FAIL      test_public_surface.py                            127        1         
+FAIL      test_streaming.py                                 127        0         

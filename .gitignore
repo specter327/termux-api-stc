@@ -216,3 +216,21 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+.obsidian/
+
+# Lifecycle script runtime
+.release-tools/
+.upgrade-tools/
+.install-tools/
+.verification-tools/
+.uninstall-tools/
+
+# Lifecycle evidence
+.upgrade-results/
+.install-results/
+.verification-results/
+.uninstall-results/
+
+# Test evidence
+tests/results/*

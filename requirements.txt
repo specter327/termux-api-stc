@@ -1,0 +1,3 @@
+# termux-api-stc has no mandatory Python runtime dependencies.
+# Platform requirement on Termux is installed with the Termux package manager:
+#   pkg install termux-api

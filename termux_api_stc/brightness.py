@@ -1,38 +1,24 @@
-"""Wrapper de `termux-brightness`."""
-from typing import Union
-from .core import run
-from .core import run_async
+from __future__ import annotations
+from typing import Literal
+from .core.command import Command
+
+_COMMAND = Command("termux-brightness")
+Brightness = int | Literal["auto"]
 
 
-def set_brightness(level: Union[int, str]):
-    """
-    Wraps `termux-brightness <0-255|auto>`.
-    :param level: entero 0-255, o el string "auto" para brillo automatico.
-    """
-    if isinstance(level, str):
-        if level != "auto":
-            raise ValueError("level debe ser int 0-255, o el string 'auto'")
-        value = level
-    else:
-        if not (0 <= level <= 255):
-            raise ValueError("level debe estar entre 0 y 255, o ser 'auto'")
-        value = str(level)
-    return run("termux-brightness", [value], parse_json=False)
+def _value(value: Brightness) -> str:
+    if value == "auto":
+        return "auto"
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise TypeError("brightness must be int or 'auto'")
+    if not 0 <= value <= 255:
+        raise ValueError("brightness must be between 0 and 255")
+    return str(value)
 
-# ==========
-# Asynchronous API
-# ==========
-async def set_brightness_async(level: Union[int, str]):
-    """
-    Wraps `termux-brightness <0-255|auto>`.
-    :param level: entero 0-255, o el string "auto" para brillo automatico.
-    """
-    if isinstance(level, str):
-        if level != "auto":
-            raise ValueError("level debe ser int 0-255, o el string 'auto'")
-        value = level
-    else:
-        if not (0 <= level <= 255):
-            raise ValueError("level debe estar entre 0 y 255, o ser 'auto'")
-        value = str(level)
-    return await run_async("termux-brightness", [value], parse_json=False)
+
+def set(value: Brightness, *, timeout: float | None = 15.0) -> str:
+    return _COMMAND.text(_value(value), timeout=timeout)
+
+
+async def set_async(value: Brightness, *, timeout: float | None = 15.0) -> str:
+    return await _COMMAND.text_async(_value(value), timeout=timeout)

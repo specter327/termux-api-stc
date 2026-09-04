@@ -1,17 +1,16 @@
-"""Wrapper de `termux-speech-to-text`."""
-from .core import run
-from .core import run_async
+from __future__ import annotations
+from .core.command import Command
+
+_COMMAND = Command("termux-speech-to-text")
 
 
-def listen() -> str:
-    """Wraps `termux-speech-to-text`. Devuelve el texto transcrito."""
-    result = run("termux-speech-to-text", parse_json=False)
-    return result or ""
+def transcribe(*, timeout: float | None = 120.0) -> str:
+    return _COMMAND.text(timeout=timeout)
 
-# ==========
-# Asynchronous API
-# ==========
-async def listen_async() -> str:
-    """Wraps `termux-speech-to-text`. Devuelve el texto transcrito."""
-    result = await run_async("termux-speech-to-text", parse_json=False)
-    return result or ""
+
+async def transcribe_async(*, timeout: float | None = 120.0) -> str:
+    return await _COMMAND.text_async(timeout=timeout)
+
+
+def progress_lines(*, startup_timeout: float | None = 120.0):
+    return _COMMAND.stream_lines("-p", startup_timeout=startup_timeout)

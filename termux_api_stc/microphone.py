@@ -1,82 +1,60 @@
-"""Wrapper de `termux-microphone-record`."""
-from typing import Optional
-from .core import run
-from .core import run_async
+from __future__ import annotations
+from pathlib import Path
+from typing import Literal
+from .core.command import Command
+from .core.models import ExecutionResult
+
+_COMMAND = Command("termux-microphone-record")
+Encoder = Literal["aac", "amr_wb", "amr_nb", "opus"]
 
 
-def record(file: Optional[str] = None, limit_seconds: Optional[int] = None,
-           encoder: Optional[str] = None, bitrate: Optional[int] = None,
-           sample_rate: Optional[int] = None, channels: Optional[int] = None,
-           background: bool = True):
-    """
-    Wraps `termux-microphone-record -f file [-l limit] [-e encoder] [-b bitrate]
-    [-r rate] [-c channels] [-d]`.
-    :param background: si True, agrega -d para ejecutar en segundo plano y
-                        devolver el control de inmediato.
-    """
-    args = []
-    if background:
+def _record_args(*, file: str | Path | None, limit_seconds: int | None, encoder: Encoder | None, bitrate_kbps: int | None, sample_rate_hz: int | None, channels: int | None) -> tuple[str, ...]:
+    args: list[str] = []
+    if file is None and all(x is None for x in (limit_seconds, encoder, bitrate_kbps, sample_rate_hz, channels)):
         args.append("-d")
     if file is not None:
-        args += ["-f", file]
+        args.extend(("-f", str(file)))
     if limit_seconds is not None:
-        args += ["-l", str(limit_seconds)]
+        if limit_seconds < 0:
+            raise ValueError("limit_seconds must be >= 0")
+        args.extend(("-l", str(limit_seconds)))
     if encoder is not None:
-        args += ["-e", encoder]
-    if bitrate is not None:
-        args += ["-b", str(bitrate)]
-    if sample_rate is not None:
-        args += ["-r", str(sample_rate)]
+        if encoder not in {"aac", "amr_wb", "amr_nb", "opus"}:
+            raise ValueError(f"unsupported encoder: {encoder}")
+        args.extend(("-e", encoder))
+    if bitrate_kbps is not None:
+        if bitrate_kbps <= 0:
+            raise ValueError("bitrate_kbps must be > 0")
+        args.extend(("-b", str(bitrate_kbps)))
+    if sample_rate_hz is not None:
+        if sample_rate_hz <= 0:
+            raise ValueError("sample_rate_hz must be > 0")
+        args.extend(("-r", str(sample_rate_hz)))
     if channels is not None:
-        args += ["-c", str(channels)]
-    return run("termux-microphone-record", args, parse_json=False)
+        if channels < 1:
+            raise ValueError("channels must be >= 1")
+        args.extend(("-c", str(channels)))
+    return tuple(args)
 
 
-def info():
-    """Wraps `termux-microphone-record -i`. Estado de la grabacion actual."""
-    return run("termux-microphone-record", ["-i"])
+def start(*, file: str | Path | None = None, limit_seconds: int | None = None, encoder: Encoder | None = None, bitrate_kbps: int | None = None, sample_rate_hz: int | None = None, channels: int | None = None, timeout: float | None = 30.0) -> ExecutionResult:
+    return _COMMAND.result(*_record_args(file=file, limit_seconds=limit_seconds, encoder=encoder, bitrate_kbps=bitrate_kbps, sample_rate_hz=sample_rate_hz, channels=channels), timeout=timeout)
 
 
-def quit():
-    """Wraps `termux-microphone-record -q`. Detiene la grabacion en curso."""
-    return run("termux-microphone-record", ["-q"], parse_json=False)
-
-# ==========
-# Asynchronous API
-# ==========
-async def record_async(file: Optional[str] = None, limit_seconds: Optional[int] = None,
-           encoder: Optional[str] = None, bitrate: Optional[int] = None,
-           sample_rate: Optional[int] = None, channels: Optional[int] = None,
-           background: bool = True):
-    """
-    Wraps `termux-microphone-record -f file [-l limit] [-e encoder] [-b bitrate]
-    [-r rate] [-c channels] [-d]`.
-    :param background: si True, agrega -d para ejecutar en segundo plano y
-                        devolver el control de inmediato.
-    """
-    args = []
-    if background:
-        args.append("-d")
-    if file is not None:
-        args += ["-f", file]
-    if limit_seconds is not None:
-        args += ["-l", str(limit_seconds)]
-    if encoder is not None:
-        args += ["-e", encoder]
-    if bitrate is not None:
-        args += ["-b", str(bitrate)]
-    if sample_rate is not None:
-        args += ["-r", str(sample_rate)]
-    if channels is not None:
-        args += ["-c", str(channels)]
-    return await run_async("termux-microphone-record", args, parse_json=False)
+def info(*, timeout: float | None = 15.0) -> ExecutionResult:
+    return _COMMAND.result("-i", timeout=timeout)
 
 
-async def info_async():
-    """Wraps `termux-microphone-record -i`. Estado de la grabacion actual."""
-    return await run_async("termux-microphone-record", ["-i"])
+def stop(*, timeout: float | None = 15.0) -> ExecutionResult:
+    return _COMMAND.result("-q", timeout=timeout)
+
+async def start_async(*, file: str | Path | None = None, limit_seconds: int | None = None, encoder: Encoder | None = None, bitrate_kbps: int | None = None, sample_rate_hz: int | None = None, channels: int | None = None, timeout: float | None = 30.0) -> ExecutionResult:
+    return await _COMMAND.result_async(*_record_args(file=file, limit_seconds=limit_seconds, encoder=encoder, bitrate_kbps=bitrate_kbps, sample_rate_hz=sample_rate_hz, channels=channels), timeout=timeout)
 
 
-async def quit_async():
-    """Wraps `termux-microphone-record -q`. Detiene la grabacion en curso."""
-    return await run_async("termux-microphone-record", ["-q"], parse_json=False)
+async def info_async(*, timeout: float | None = 15.0) -> ExecutionResult:
+    return await _COMMAND.result_async("-i", timeout=timeout)
+
+
+async def stop_async(*, timeout: float | None = 15.0) -> ExecutionResult:
+    return await _COMMAND.result_async("-q", timeout=timeout)

@@ -1,40 +1,48 @@
-"""Wrapper de `termux-share`."""
-from typing import Optional
-from .core import run
-from .core import run_async
+from __future__ import annotations
+from pathlib import Path
+from typing import Literal
+from .core.command import Command
+from .core.models import ExecutionResult
+
+_COMMAND = Command("termux-share")
+Action = Literal["edit", "send", "view"]
 
 
-def share(file: str, action: str = "send", content_type: Optional[str] = None,
-          title: Optional[str] = None, default_receiver: bool = False):
-    """
-    Wraps `termux-share [-a action] [-c content-type] [-d] [-t title] file`.
-    :param action: 'send', 'view' o 'edit'
-    """
+def _args(*, action: Action, content_type: str | None, default_receiver: bool, title: str | None) -> list[str]:
+    if action not in {"edit", "send", "view"}:
+        raise ValueError(f"unsupported action: {action}")
     args = ["-a", action]
     if content_type is not None:
-        args += ["-c", content_type]
+        args.extend(("-c", content_type))
     if default_receiver:
         args.append("-d")
     if title is not None:
-        args += ["-t", title]
-    args.append(file)
-    return run("termux-share", args, parse_json=False)
+        args.extend(("-t", title))
+    return args
 
-# ==========
-# Asynchronous API
-# ==========
-async def share_async(file: str, action: str = "send", content_type: Optional[str] = None,
-          title: Optional[str] = None, default_receiver: bool = False):
-    """
-    Wraps `termux-share [-a action] [-c content-type] [-d] [-t title] file`.
-    :param action: 'send', 'view' o 'edit'
-    """
-    args = ["-a", action]
-    if content_type is not None:
-        args += ["-c", content_type]
-    if default_receiver:
-        args.append("-d")
-    if title is not None:
-        args += ["-t", title]
-    args.append(file)
-    return await run_async("termux-share", args, parse_json=False)
+
+def share_text(text: str, *, action: Action = "view", content_type: str | None = None, default_receiver: bool = False, title: str | None = None, timeout: float | None = 30.0) -> ExecutionResult:
+    args = _args(action=action, content_type=content_type, default_receiver=default_receiver, title=title)
+    return _COMMAND.result(*args, input=text.encode("utf-8"), timeout=timeout)
+
+
+def share_file(file: str | Path, *, action: Action = "view", content_type: str | None = None, default_receiver: bool = False, title: str | None = None, timeout: float | None = 30.0) -> ExecutionResult:
+    path = Path(file)
+    if not path.is_file():
+        raise ValueError(f"not a file: {path}")
+    args = _args(action=action, content_type=content_type, default_receiver=default_receiver, title=title)
+    args.append(str(path))
+    return _COMMAND.result(*args, timeout=timeout)
+
+async def share_text_async(text: str, *, action: Action = "view", content_type: str | None = None, default_receiver: bool = False, title: str | None = None, timeout: float | None = 30.0) -> ExecutionResult:
+    args = _args(action=action, content_type=content_type, default_receiver=default_receiver, title=title)
+    return await _COMMAND.result_async(*args, input=text.encode("utf-8"), timeout=timeout)
+
+
+async def share_file_async(file: str | Path, *, action: Action = "view", content_type: str | None = None, default_receiver: bool = False, title: str | None = None, timeout: float | None = 30.0) -> ExecutionResult:
+    path = Path(file)
+    if not path.is_file():
+        raise ValueError(f"not a file: {path}")
+    args = _args(action=action, content_type=content_type, default_receiver=default_receiver, title=title)
+    args.append(str(path))
+    return await _COMMAND.result_async(*args, timeout=timeout)
