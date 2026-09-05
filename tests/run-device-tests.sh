@@ -120,6 +120,7 @@ GIT_STATUS="$(git -C "${PROJECT_ROOT}" status --porcelain=v1 --untracked-files=a
 
 case "${MODE}" in
     readonly)
+        export TERMUX_API_STC_FAIL_ON_SKIP=1
         PYTEST_ARGS=(
             tests/device/test_readonly_conformance.py
             tests/device/test_native_parity.py
@@ -128,6 +129,7 @@ case "${MODE}" in
         ;;
     safe-effects|side-effects)
         export TERMUX_API_STC_ENABLE_SAFE_EFFECTS=1
+        export TERMUX_API_STC_FAIL_ON_SKIP=1
         PYTEST_ARGS=(tests/device/test_safe_effects.py)
         ;;
     interactive)
@@ -140,6 +142,7 @@ case "${MODE}" in
         ;;
     qualification)
         export TERMUX_API_STC_ENABLE_SAFE_EFFECTS=1
+        export TERMUX_API_STC_FAIL_ON_SKIP=1
         PYTEST_ARGS=(
             tests/device/test_readonly_conformance.py
             tests/device/test_native_parity.py
@@ -156,26 +159,49 @@ case "${MODE}" in
 esac
 
 cd "${PROJECT_ROOT}" || exit 1
+
+if [[ "${MODE}" == "qualification" ]]; then
+    if [[ -z "${GIT_COMMIT}" ]]; then
+        echo "ERROR: qualification requires a Git commit identity."
+        exit 122
+    fi
+    if [[ -n "${GIT_STATUS}" ]]; then
+        echo "ERROR: qualification requires a clean Git working tree."
+        printf '%s\n' "${GIT_STATUS}"
+        exit 121
+    fi
+fi
+
+JUNIT_XML="${RESULT_DIR}/junit.xml"
 set +e
 PYTHONPATH="${PROJECT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
-    "${PYTHON}" -m pytest -vv "${PYTEST_ARGS[@]}" 2>&1 | tee "${RESULT_DIR}/test-output.txt"
+    "${PYTHON}" -m pytest -vv --junitxml="${JUNIT_XML}" "${PYTEST_ARGS[@]}" 2>&1 | tee "${RESULT_DIR}/test-output.txt"
 RC=${PIPESTATUS[0]}
 set -e
 
+if [[ ! -f "${JUNIT_XML}" ]]; then
+    echo "ERROR: pytest did not produce JUnit evidence." | tee -a "${RESULT_DIR}/test-output.txt"
+    : > "${JUNIT_XML}"
+    [[ "${RC}" -eq 0 ]] && RC=120
+fi
+
 printf '%s\n' "${RC}" > "${RESULT_DIR}/exit-code.txt"
+COUNTS="$(${PYTHON} "${SCRIPT_DIR}/device/junit_summary.py" "${JUNIT_XML}")"
+printf '%s\n' "${COUNTS}" > "${RESULT_DIR}/counts.txt"
 {
     echo "mode=${MODE}"
     echo "runtime_version=${RUNTIME_VERSION}"
     echo "distribution_version=${INSTALLED_VERSION}"
     echo "git_commit=${GIT_COMMIT:-UNKNOWN}"
     echo "git_tree=$([[ -z "${GIT_STATUS}" ]] && echo clean || echo dirty)"
+    echo "${COUNTS}"
     echo "exit_code=${RC}"
     [[ "${RC}" -eq 0 ]] && echo "status=PASS" || echo "status=FAIL"
 } > "${RESULT_DIR}/summary.txt"
 
 (
     cd "${RESULT_DIR}" || exit 1
-    sha256sum environment.txt test-output.txt exit-code.txt summary.txt > SHA256SUMS
+    sha256sum environment.txt test-output.txt exit-code.txt counts.txt summary.txt junit.xml > SHA256SUMS
 )
 
 echo

@@ -1,4 +1,4 @@
-# Evolution 3.1.0a3
+# Evolution 3.1.0a4
 
 This repository is a complete replacement snapshot.
 
@@ -27,13 +27,13 @@ This repository is a complete replacement snapshot.
 
 ## Target
 
-Version: `3.1.0a3`
+Version: `3.1.0a4`
 Python: `>=3.10`
 Termux:API app baseline: `0.53.0`
 Pinned `termux-api-package` tree:
 `0e3f9222eea7760c76ea6368dadbdf884ab85fbf`
 
-## 3.1.0a3 release-qualification hardening
+## 3.1.0a4 release-qualification hardening
 
 - Split real-device validation into read-only, safe/reversible, interactive, and sensitive risk tiers.
 - Added 3 real Android async conformance tests.
@@ -46,3 +46,17 @@ Pinned `termux-api-package` tree:
 - Fixed wheel installation smoke so imports execute outside the source checkout.
 - Dry-run release messages now distinguish simulated tag/push/publication actions.
 - Updated project license metadata to the SPDX string form.
+
+## 3.1.0a4 observed-behavior and qualification hardening
+
+- Corrected camera side-effect conformance to the actual public return contract (`str`), while still verifying a real JPEG artifact.
+- Replaced clipboard round-trip assumptions with native-CLI/STC differential parity after Android 14 reference-device evidence showed empty native reads after successful native writes.
+- Mandatory `readonly`, `safe-effects`, and `qualification` campaigns now reject silent SKIPs.
+- `qualification` refuses a dirty Git tree and requires an exact Git commit identity.
+- Device evidence now includes JUnit XML and machine-readable test/failure/error/skip counts, all covered by SHA-256 evidence.
+- Pytest markers are strict, preventing accidental misspelled/undeclared campaign markers.
+- CI now compiles sources, runs `pip check`, validates Python 3.10–3.14, and smoke-installs both wheel and sdist outside the checkout.
+- Release tooling now smoke-installs the sdist as well as the wheel before publication.
+- Added regression tests for camera return semantics, clipboard stdin semantics, and evidence-count parsing.
+
+The design rule remains: observed upstream behavior may narrow STC claims; STC must not invent stronger guarantees than the official CLI demonstrates on the reference device.

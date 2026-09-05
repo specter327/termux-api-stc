@@ -5,6 +5,8 @@ candidate commit and version.
 
 ## Mandatory portable evidence
 
+Current portable collection for `3.1.0a4`: `223` tests.
+
 - Linux unit/contract suite: PASS.
 - GitHub Actions Python 3.10, 3.11, 3.12, 3.13 and 3.14: PASS.
 - clean sdist + wheel build: PASS.
@@ -57,3 +59,17 @@ runtime version = distribution version
 ```
 
 Generated test evidence and build artifacts must not be tracked by Git.
+
+## Mandatory campaign semantics
+
+For `readonly`, `safe-effects`, and `qualification`, `PASS` means:
+
+```text
+failures = 0
+errors   = 0
+skipped  = 0
+```
+
+A missing capability on the declared reference device therefore cannot silently become compatibility evidence. Interactive and sensitive campaigns retain explicit SKIP semantics because they are operator/hardware gated and are not blanket publication requirements.
+
+The `qualification` campaign additionally requires a clean Git working tree and a resolvable commit SHA so the evidence is attributable to one immutable candidate.

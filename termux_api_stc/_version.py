@@ -1,3 +1,3 @@
 """Single authoritative project version."""
 
-__version__ = "3.1.0a3"
+__version__ = "3.1.0a4"

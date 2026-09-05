@@ -801,6 +801,64 @@ class ReleaseApp:
 
         UI_INSTANCE.ok("Wheel installation/import smoke passed.")
 
+
+    def sdist_smoke(self) -> None:
+        UI_INSTANCE.section("Source distribution installation smoke")
+
+        if self.config.dry_run:
+            UI_INSTANCE.info("Would install the built sdist into an isolated venv.")
+            return
+
+        sdist = next((p for p in self.state.dist_files if p.name.endswith(".tar.gz")), None)
+        if sdist is None:
+            raise ReleaseError("Built sdist not found.")
+
+        tmp = Path(tempfile.mkdtemp(prefix="termux-api-stc-sdist-"))
+        try:
+            venv.EnvBuilder(with_pip=True).create(tmp)
+            python = tmp / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+
+            run_command(
+                [
+                    str(python),
+                    "-m",
+                    "pip",
+                    "install",
+                    "--disable-pip-version-check",
+                    "--quiet",
+                    "--no-deps",
+                    str(sdist),
+                ],
+                capture=True,
+            )
+
+            script = textwrap.dedent(
+                f"""
+                import termux_api_stc
+                actual = getattr(termux_api_stc, "__version__", None)
+                expected = {self.metadata.version!r}
+                if actual is not None and actual != expected:
+                    raise SystemExit(f"installed version mismatch: {{actual!r}} != {{expected!r}}")
+                print(termux_api_stc.__file__)
+                print(actual or "version-not-exposed")
+                """
+            )
+            smoke_cwd = tmp / "smoke-cwd"
+            smoke_cwd.mkdir()
+            result = run_command([str(python), "-c", script], cwd=smoke_cwd)
+            imported = result.stdout.splitlines()[0].strip() if result.stdout.splitlines() else ""
+            if not imported or str(self.root) in imported:
+                raise ReleaseError(
+                    "Sdist smoke imported from the source checkout instead of the isolated venv: "
+                    + imported
+                )
+            run_command([str(python), "-m", "pip", "check"], cwd=smoke_cwd)
+            UI_INSTANCE.info("Installed sdist: " + " | ".join(result.stdout.splitlines()))
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+
+        UI_INSTANCE.ok("Source distribution installation/import smoke passed.")
+
     def write_checksums(self) -> None:
         UI_INSTANCE.section("Checksums")
 
@@ -1060,6 +1118,7 @@ class ReleaseApp:
         self.build()
         self.twine_check()
         self.wheel_smoke()
+        self.sdist_smoke()
         self.write_checksums()
 
     def run(self) -> None:

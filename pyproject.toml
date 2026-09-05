@@ -11,15 +11,22 @@ requires-python = ">=3.10"
 license = "MIT"
 keywords = ["termux", "android", "termux-api", "python"]
 classifiers = [
+  "Development Status :: 3 - Alpha",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
   "Operating System :: Android",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 
 [project.urls]
-Homepage = "https://pypi.org/project/termux-api-stc/"
+Homepage = "https://github.com/specter327/termux-api-stc"
 Repository = "https://github.com/specter327/termux-api-stc"
+Issues = "https://github.com/specter327/termux-api-stc/issues"
 
 [project.optional-dependencies]
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
@@ -31,6 +38,7 @@ version = {attr = "termux_api_stc._version.__version__"}
 include = ["termux_api_stc*"]
 
 [tool.pytest.ini_options]
+addopts = "--strict-markers"
 asyncio_mode = "auto"
 testpaths = ["tests/unit-test", "tests/device"]
 markers = [
