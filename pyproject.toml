@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Strict Python consumer of the pinned official Termux:API command interface"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 keywords = ["termux", "android", "termux-api", "python"]
 classifiers = [
   "Programming Language :: Python :: 3",
