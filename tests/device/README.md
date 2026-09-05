@@ -32,6 +32,17 @@ vibration, toast, TTS, and real async side-effect paths.
 May require biometric interaction, speech, Android chooser/file picker, microphone
 permission, or other explicit operator interaction.
 
+Interactive evidence is semantic, not exit-code-only:
+
+- fingerprint hardware/enrollment absence becomes an explicit SKIP, never PASS;
+- empty speech recognition does not count as successful transcription;
+- StorageGet is compared against the native CLI before missing output is attributed to STC;
+- share process success is separate from UI observation. To attest that the chooser is
+  actually observed, run with `TERMUX_API_STC_CONFIRM_SHARE_UI=1`.
+
+A successful interactive campaign containing legitimate hardware/operator SKIPs is
+reported as `PASS_WITH_SKIPS`.
+
 ## 4. Sensitive/stateful/external actions — never automatic
 
 ```bash
@@ -76,3 +87,16 @@ device where hardware/permissions allow it.
 Every campaign writes an evidence directory under `tests/results/` containing the
 exact Git commit, source/distribution versions, environment, packages, raw pytest
 output, exit code, summary, and SHA-256 manifest.
+
+
+## Installed wheel / PyPI-like qualification
+
+To validate a non-editable installed wheel while reusing the repository's device tests:
+
+```bash
+TERMUX_API_STC_USE_INSTALLED=1 ./tests/run-device-tests.sh qualification
+```
+
+Installed-artifact mode runs pytest from outside the checkout with importlib import mode
+and aborts if the package resolves to the repository source tree. The evidence records
+`import_mode=installed-artifact` and the resolved `import_path`.

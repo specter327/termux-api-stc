@@ -5,6 +5,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 RESULTS_ROOT="${SCRIPT_DIR}/results"
 MODE="${1:-readonly}"
+USE_INSTALLED="${TERMUX_API_STC_USE_INSTALLED:-0}"
 TIMESTAMP="$(date -u +'%Y%m%dT%H%M%SZ')"
 RESULT_DIR="${RESULTS_ROOT}/${TIMESTAMP}-device-${MODE}"
 
@@ -47,8 +48,10 @@ if ! "${PYTHON}" -c 'import pytest_asyncio' >/dev/null 2>&1; then
     exit 125
 fi
 
-VERSION_PREFLIGHT="$(
-PYTHONPATH="${PROJECT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" "${PYTHON}" - <<'PY'
+if [[ "${USE_INSTALLED}" == "1" ]]; then
+    VERSION_PREFLIGHT="$(
+        cd "${HOME:-/tmp}" || exit 1
+        "${PYTHON}" - <<'PY'
 import importlib.metadata as md
 import termux_api_stc
 try:
@@ -57,10 +60,27 @@ except md.PackageNotFoundError:
     installed = None
 print(termux_api_stc.__version__)
 print(installed or "")
+print(termux_api_stc.__file__)
 PY
-)"
+    )"
+else
+    VERSION_PREFLIGHT="$(
+    PYTHONPATH="${PROJECT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" "${PYTHON}" - <<'PY'
+import importlib.metadata as md
+import termux_api_stc
+try:
+    installed = md.version("termux-api-stc")
+except md.PackageNotFoundError:
+    installed = None
+print(termux_api_stc.__version__)
+print(installed or "")
+print(termux_api_stc.__file__)
+PY
+    )"
+fi
 RUNTIME_VERSION="$(printf '%s\n' "${VERSION_PREFLIGHT}" | sed -n '1p')"
 INSTALLED_VERSION="$(printf '%s\n' "${VERSION_PREFLIGHT}" | sed -n '2p')"
+IMPORT_PATH="$(printf '%s\n' "${VERSION_PREFLIGHT}" | sed -n '3p')"
 if [[ -z "${INSTALLED_VERSION}" ]]; then
     echo "ERROR: termux-api-stc distribution is not installed for ${PYTHON}."
     echo "Install with: ${PYTHON} -m pip install -e '.[test]'"
@@ -71,6 +91,15 @@ if [[ "${INSTALLED_VERSION}" != "${RUNTIME_VERSION}" ]]; then
     echo "runtime=${RUNTIME_VERSION}"
     echo "distribution=${INSTALLED_VERSION}"
     exit 124
+fi
+if [[ "${USE_INSTALLED}" == "1" ]]; then
+    case "${IMPORT_PATH}" in
+        "${PROJECT_ROOT}"/*)
+            echo "ERROR: installed-artifact mode imported from source checkout."
+            echo "source=${IMPORT_PATH}"
+            exit 119
+            ;;
+    esac
 fi
 
 mkdir -p "${RESULT_DIR}"
@@ -88,11 +117,14 @@ GIT_STATUS="$(git -C "${PROJECT_ROOT}" status --porcelain=v1 --untracked-files=a
     echo "pytest=$(${PYTHON} -m pytest --version 2>&1 | head -1)"
     echo "runtime_version=${RUNTIME_VERSION}"
     echo "distribution_version=${INSTALLED_VERSION}"
+    echo "import_path=${IMPORT_PATH:-UNKNOWN}"
+    echo "import_mode=$([[ "${USE_INSTALLED}" == "1" ]] && echo installed-artifact || echo source-checkout)"
     echo "git_commit=${GIT_COMMIT:-UNKNOWN}"
     echo "git_branch=${GIT_BRANCH:-UNKNOWN}"
     if [[ -z "${GIT_STATUS}" ]]; then echo "git_tree=clean"; else echo "git_tree=dirty"; fi
     echo "PREFIX=${PREFIX:-UNKNOWN}"
     echo "TERMUX_VERSION=${TERMUX_VERSION:-UNKNOWN}"
+    echo "interactive_share_ui_confirmed=${TERMUX_API_STC_CONFIRM_SHARE_UI:-0}"
     echo "android_release=$(getprop ro.build.version.release 2>/dev/null || true)"
     echo "android_sdk=$(getprop ro.build.version.sdk 2>/dev/null || true)"
     echo "manufacturer=$(getprop ro.product.manufacturer 2>/dev/null || true)"
@@ -174,9 +206,23 @@ fi
 
 JUNIT_XML="${RESULT_DIR}/junit.xml"
 set +e
-PYTHONPATH="${PROJECT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
-    "${PYTHON}" -m pytest -vv --junitxml="${JUNIT_XML}" "${PYTEST_ARGS[@]}" 2>&1 | tee "${RESULT_DIR}/test-output.txt"
-RC=${PIPESTATUS[0]}
+if [[ "${USE_INSTALLED}" == "1" ]]; then
+    ABS_PYTEST_ARGS=()
+    for test_path in "${PYTEST_ARGS[@]}"; do
+        ABS_PYTEST_ARGS+=("${PROJECT_ROOT}/${test_path}")
+    done
+    (
+        cd "${HOME:-/tmp}" || exit 1
+        TERMUX_API_STC_REQUIRE_INSTALLED=1 \
+            "${PYTHON}" -m pytest -vv --import-mode=importlib --rootdir="${PROJECT_ROOT}" \
+            --junitxml="${JUNIT_XML}" "${ABS_PYTEST_ARGS[@]}"
+    ) 2>&1 | tee "${RESULT_DIR}/test-output.txt"
+    RC=${PIPESTATUS[0]}
+else
+    PYTHONPATH="${PROJECT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" \
+        "${PYTHON}" -m pytest -vv --junitxml="${JUNIT_XML}" "${PYTEST_ARGS[@]}" 2>&1 | tee "${RESULT_DIR}/test-output.txt"
+    RC=${PIPESTATUS[0]}
+fi
 set -e
 
 if [[ ! -f "${JUNIT_XML}" ]]; then
@@ -188,15 +234,27 @@ fi
 printf '%s\n' "${RC}" > "${RESULT_DIR}/exit-code.txt"
 COUNTS="$(${PYTHON} "${SCRIPT_DIR}/device/junit_summary.py" "${JUNIT_XML}")"
 printf '%s\n' "${COUNTS}" > "${RESULT_DIR}/counts.txt"
+SKIPPED_COUNT="$(printf '%s\n' "${COUNTS}" | sed -n 's/.*skipped=\([0-9][0-9]*\).*/\1/p')"
+SKIPPED_COUNT="${SKIPPED_COUNT:-0}"
+if [[ "${RC}" -ne 0 ]]; then
+    CAMPAIGN_STATUS="FAIL"
+elif [[ "${SKIPPED_COUNT}" -gt 0 ]]; then
+    CAMPAIGN_STATUS="PASS_WITH_SKIPS"
+else
+    CAMPAIGN_STATUS="PASS"
+fi
+
 {
     echo "mode=${MODE}"
     echo "runtime_version=${RUNTIME_VERSION}"
     echo "distribution_version=${INSTALLED_VERSION}"
+    echo "import_path=${IMPORT_PATH:-UNKNOWN}"
+    echo "import_mode=$([[ "${USE_INSTALLED}" == "1" ]] && echo installed-artifact || echo source-checkout)"
     echo "git_commit=${GIT_COMMIT:-UNKNOWN}"
     echo "git_tree=$([[ -z "${GIT_STATUS}" ]] && echo clean || echo dirty)"
     echo "${COUNTS}"
     echo "exit_code=${RC}"
-    [[ "${RC}" -eq 0 ]] && echo "status=PASS" || echo "status=FAIL"
+    echo "status=${CAMPAIGN_STATUS}"
 } > "${RESULT_DIR}/summary.txt"
 
 (

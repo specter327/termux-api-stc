@@ -36,7 +36,7 @@ result = api["termux-battery-status"].json()
 ```
 
 Inspected commands additionally receive richer sync/async wrappers. Version
-`3.1.0a4` consolidates the evidence-first 3.1 line: explicit empty/non-empty
+`3.1.0a5` consolidates the evidence-first 3.1 line: explicit empty/non-empty
 payload state, conservative capability observation, richer Termux/Android
 environment reporting, notification and notification-channel support, and
 runtime/distribution version-consistency checks.

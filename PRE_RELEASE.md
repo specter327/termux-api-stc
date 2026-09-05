@@ -5,7 +5,7 @@ candidate commit and version.
 
 ## Mandatory portable evidence
 
-Current portable collection for `3.1.0a4`: `223` tests.
+Current portable collection for `3.1.0a5`: `227` tests.
 
 - Linux unit/contract suite: PASS.
 - GitHub Actions Python 3.10, 3.11, 3.12, 3.13 and 3.14: PASS.
@@ -39,7 +39,11 @@ Run on the reference device where the required hardware and permissions exist:
 
 A SKIP is acceptable only when the reason is an explicitly unavailable device
 capability or operator interaction that is not part of the declared compatibility
-claim. Unexpected failures are release blockers.
+claim. Unexpected failures are release blockers. An interactive campaign with valid
+SKIPs is reported as `PASS_WITH_SKIPS`, never as an indistinguishable `PASS`.
+
+For share-chooser validation, set `TERMUX_API_STC_CONFIRM_SHARE_UI=1` only when the
+operator will actively confirm that Android displays the chooser during the test.
 
 ## Sensitive evidence
 
@@ -73,3 +77,16 @@ skipped  = 0
 A missing capability on the declared reference device therefore cannot silently become compatibility evidence. Interactive and sensitive campaigns retain explicit SKIP semantics because they are operator/hardware gated and are not blanket publication requirements.
 
 The `qualification` campaign additionally requires a clean Git working tree and a resolvable commit SHA so the evidence is attributable to one immutable candidate.
+
+
+## Installed-artifact Android qualification
+
+After the candidate wheel is installed non-editably on the reference device, run:
+
+```bash
+TERMUX_API_STC_USE_INSTALLED=1 ./tests/run-device-tests.sh qualification
+```
+
+The runner executes from outside the checkout, uses pytest importlib mode, records the
+actual import path, and aborts if `termux_api_stc` resolves inside the source tree.
+This is the final PyPI-like Android gate.

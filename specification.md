@@ -72,7 +72,7 @@ Rich wrappers are only added after inspection of the corresponding upstream
 script. `termux_api_stc.contracts.INSPECTED_CONTRACTS` records the inspected
 source path and source SHA.
 
-## 5. 3.1.0a4 inspected expansion
+## 5. 3.1.0a5 inspected expansion
 
 The current expansion adds source-backed wrappers for:
 

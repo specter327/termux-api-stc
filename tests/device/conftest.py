@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -8,6 +9,25 @@ import pytest
 def _is_termux() -> bool:
     prefix = os.environ.get("PREFIX", "")
     return bool(prefix and "com.termux" in prefix)
+
+
+
+def pytest_sessionstart(session):
+    """Reject source-checkout shadowing during installed-artifact qualification."""
+    if os.environ.get("TERMUX_API_STC_REQUIRE_INSTALLED") != "1":
+        return
+    import termux_api_stc
+
+    project_root = Path(__file__).resolve().parents[2]
+    imported = Path(termux_api_stc.__file__).resolve()
+    try:
+        imported.relative_to(project_root)
+    except ValueError:
+        return
+    pytest.exit(
+        f"installed-artifact qualification imported source checkout: {imported}",
+        returncode=119,
+    )
 
 
 def pytest_collection_modifyitems(config, items):

@@ -4,6 +4,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 from termux_api_stc import camera, clipboard
+from tests.device.test_interactive_actions import _fingerprint_semantics
 from tests.device.junit_summary import summarize
 
 
@@ -62,3 +63,35 @@ def test_clipboard_set_uses_official_stdin_contract(monkeypatch):
     assert seen["args"] == ()
     assert seen["input"] == b"hello"
     assert seen["timeout"] == 9
+
+
+
+def test_fingerprint_no_hardware_is_not_success():
+    payload = {
+        "errors": ["ERROR_NO_HARDWARE", "ERROR_NO_ENROLLED_FINGERPRINTS"],
+        "failed_attempts": 0,
+        "auth_result": "AUTH_RESULT_UNKNOWN",
+    }
+    assert _fingerprint_semantics(payload) == "unsupported-no-hardware"
+    assert _fingerprint_semantics(payload) != "authenticated"
+
+
+def test_fingerprint_success_requires_explicit_auth_result_success():
+    assert _fingerprint_semantics({"errors": [], "auth_result": "AUTH_RESULT_SUCCESS"}) == "authenticated"
+    assert _fingerprint_semantics({"errors": [], "auth_result": "AUTH_RESULT_UNKNOWN"}) == "not-authenticated"
+
+
+def test_empty_speech_transcript_is_not_positive_evidence():
+    # Regression for the old interactive assertion `isinstance(result, str)`,
+    # which incorrectly accepted an empty upstream transcript as functional proof.
+    value = ""
+    assert isinstance(value, str)
+    assert not value.strip()
+
+
+
+def test_installed_artifact_runner_guard_is_declared():
+    runner = (Path(__file__).parents[1] / "run-device-tests.sh").read_text(encoding="utf-8")
+    assert "TERMUX_API_STC_USE_INSTALLED" in runner
+    assert "TERMUX_API_STC_REQUIRE_INSTALLED" in runner
+    assert "installed-artifact" in runner

@@ -1,4 +1,4 @@
-# Evolution 3.1.0a4
+# Evolution 3.1.0a5
 
 This repository is a complete replacement snapshot.
 
@@ -27,13 +27,13 @@ This repository is a complete replacement snapshot.
 
 ## Target
 
-Version: `3.1.0a4`
+Version: `3.1.0a5`
 Python: `>=3.10`
 Termux:API app baseline: `0.53.0`
 Pinned `termux-api-package` tree:
 `0e3f9222eea7760c76ea6368dadbdf884ab85fbf`
 
-## 3.1.0a4 release-qualification hardening
+## 3.1.0a5 release-qualification hardening
 
 - Split real-device validation into read-only, safe/reversible, interactive, and sensitive risk tiers.
 - Added 3 real Android async conformance tests.
@@ -47,7 +47,7 @@ Pinned `termux-api-package` tree:
 - Dry-run release messages now distinguish simulated tag/push/publication actions.
 - Updated project license metadata to the SPDX string form.
 
-## 3.1.0a4 observed-behavior and qualification hardening
+## 3.1.0a5 observed-behavior and qualification hardening
 
 - Corrected camera side-effect conformance to the actual public return contract (`str`), while still verifying a real JPEG artifact.
 - Replaced clipboard round-trip assumptions with native-CLI/STC differential parity after Android 14 reference-device evidence showed empty native reads after successful native writes.
@@ -60,3 +60,24 @@ Pinned `termux-api-package` tree:
 - Added regression tests for camera return semantics, clipboard stdin semantics, and evidence-count parsing.
 
 The design rule remains: observed upstream behavior may narrow STC claims; STC must not invent stronger guarantees than the official CLI demonstrates on the reference device.
+
+
+## 3.1.0a5 final interactive-conformance hardening
+
+Evidence collected on the Android reference device showed that process success alone
+can overstate interactive capability semantics.  The final pre-PyPI candidate therefore:
+
+- rejects fingerprint exit-code-only evidence and interprets the official JSON result;
+- records missing fingerprint hardware/enrollment as explicit SKIP rather than PASS;
+- refuses to count an empty speech transcript as successful recognition;
+- validates StorageGet materialization relative to the official native CLI before
+  attributing missing output to STC;
+- separates `termux-share` process success from operator-observed Android chooser
+  behavior via `TERMUX_API_STC_CONFIRM_SHARE_UI=1`;
+- reports successful interactive/sensitive campaigns containing legitimate skips as
+  `PASS_WITH_SKIPS` rather than indistinguishable `PASS`;
+- adds portable regressions for the fingerprint and empty-speech false-positive cases.
+
+No new Termux command surface is introduced by this candidate.
+
+- Added explicit installed-artifact Android qualification (`TERMUX_API_STC_USE_INSTALLED=1`) that rejects source-checkout shadowing.
