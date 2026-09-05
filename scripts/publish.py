@@ -579,6 +579,27 @@ class ReleaseApp:
             cwd=self.root,
         ).stdout.strip()
 
+        # Publication must be anchored to the exact commit already present on origin/main.
+        # A tag/release must never make a newer local commit appear published while the
+        # default branch still exposes older source.
+        if self.config.mode in {"github", "pypi", "both"}:
+            remote_main = run_command(
+                ["git", "ls-remote", "origin", "refs/heads/main"],
+                cwd=self.root,
+                check=False,
+            )
+            remote_line = remote_main.stdout.strip() if remote_main.ok else ""
+            remote_sha = remote_line.split()[0] if remote_line else ""
+            if not remote_sha:
+                raise ReleaseError("Unable to resolve remote origin/main for publication preflight.")
+            if remote_sha != self.state.head_sha:
+                raise ReleaseError(
+                    "Publication requires HEAD == remote origin/main. "
+                    f"HEAD={self.state.head_sha}, origin/main={remote_sha}. "
+                    "Push main first, then retry the release."
+                )
+            UI_INSTANCE.ok("Remote origin/main matches HEAD.")
+
         self.state.metadata = load_metadata(self.config)
         self.state.tag = self.config.tag_prefix + self.metadata.version
 
@@ -763,7 +784,17 @@ class ReleaseApp:
                 """
             )
 
-            result = run_command([str(python), "-c", script])
+            # Import from outside the source checkout so cwd cannot shadow the wheel
+            # installed into the isolated venv.
+            smoke_cwd = tmp / "smoke-cwd"
+            smoke_cwd.mkdir()
+            result = run_command([str(python), "-c", script], cwd=smoke_cwd)
+            imported = result.stdout.splitlines()[0].strip() if result.stdout.splitlines() else ""
+            if not imported or str(self.root) in imported:
+                raise ReleaseError(
+                    "Wheel smoke imported from the source checkout instead of the isolated venv: "
+                    + imported
+                )
             UI_INSTANCE.info("Installed wheel: " + " | ".join(result.stdout.splitlines()))
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
@@ -886,7 +917,7 @@ class ReleaseApp:
             rc = stream_command(argv, cwd=self.root, dry_run=self.config.dry_run)
             if rc != 0:
                 raise ReleaseError("Unable to create release tag.")
-            UI_INSTANCE.ok(f"Created annotated tag {self.tag}.")
+            UI_INSTANCE.ok(("Would create" if self.config.dry_run else "Created") + f" annotated tag {self.tag}.")
 
         remote = self._remote_tag_commit()
         if remote:
@@ -908,7 +939,7 @@ class ReleaseApp:
             )
             if rc != 0:
                 raise ReleaseError("Unable to push release tag.")
-            UI_INSTANCE.ok(f"Pushed tag {self.tag}.")
+            UI_INSTANCE.ok(("Would push" if self.config.dry_run else "Pushed") + f" tag {self.tag}.")
 
     def github_release_exists(self) -> bool:
         args = ["gh", "release", "view", self.tag]
@@ -966,7 +997,7 @@ class ReleaseApp:
         rc = stream_command(args, cwd=self.root, dry_run=self.config.dry_run)
         if rc != 0:
             raise ReleaseError(f"GitHub Release publication failed with exit code {rc}.")
-        UI_INSTANCE.ok(f"GitHub Release {self.tag} published.")
+        UI_INSTANCE.ok(("Would publish" if self.config.dry_run else "Published") + f" GitHub Release {self.tag}.")
 
     def publish_pypi(self) -> None:
         UI_INSTANCE.section("PyPI publication")

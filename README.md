@@ -36,7 +36,7 @@ result = api["termux-battery-status"].json()
 ```
 
 Inspected commands additionally receive richer sync/async wrappers. Version
-`3.1.0a2` consolidates the evidence-first 3.1 line: explicit empty/non-empty
+`3.1.0a3` consolidates the evidence-first 3.1 line: explicit empty/non-empty
 payload state, conservative capability observation, richer Termux/Android
 environment reporting, notification and notification-channel support, and
 runtime/distribution version-consistency checks.
@@ -56,10 +56,14 @@ they do not prove Android behavior.
 ./tests/run-device-tests.sh readonly
 ```
 
-Guarded side effects:
+Release qualification on a real device is risk-tiered:
 
 ```bash
-TERMUX_API_STC_ENABLE_SIDE_EFFECTS=1 ./tests/run-device-tests.sh side-effects
+./tests/run-device-tests.sh readonly
+./tests/run-device-tests.sh safe-effects
+./tests/run-device-tests.sh qualification
 ```
 
-See `tests/device/README.md`.
+Interactive and sensitive/stateful actions are separate explicit campaigns; they are
+never silently folded into the default qualification gate. See `tests/device/README.md`
+and `PRE_RELEASE.md`.

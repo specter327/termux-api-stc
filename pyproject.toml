@@ -38,4 +38,6 @@ markers = [
   "conformance: compares library behavior against real Termux command behavior",
   "interactive: requires human/device interaction",
   "side_effect: changes device state or sends/creates something",
+  "reversible: side effect with automatic restoration or temporary artifact cleanup",
+  "sensitive: stateful, hardware-specific, or external communication action requiring explicit operator opt-in",
 ]

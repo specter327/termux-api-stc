@@ -1,4 +1,4 @@
-# Evolution 3.1.0a2
+# Evolution 3.1.0a3
 
 This repository is a complete replacement snapshot.
 
@@ -27,8 +27,22 @@ This repository is a complete replacement snapshot.
 
 ## Target
 
-Version: `3.1.0a2`
+Version: `3.1.0a3`
 Python: `>=3.10`
 Termux:API app baseline: `0.53.0`
 Pinned `termux-api-package` tree:
 `0e3f9222eea7760c76ea6368dadbdf884ab85fbf`
+
+## 3.1.0a3 release-qualification hardening
+
+- Split real-device validation into read-only, safe/reversible, interactive, and sensitive risk tiers.
+- Added 3 real Android async conformance tests.
+- Added 10 safe/reversible side-effect tests with restoration or temporary artifacts where possible.
+- Added 5 explicit interactive tests and 6 separately gated sensitive/stateful/external tests.
+- Added a `qualification` device campaign combining read-only and safe/reversible evidence.
+- Device evidence now records exact Git commit/tree state, runtime/distribution versions and Python packages.
+- Added Linux CI matrix for Python 3.10 through 3.14 plus clean package metadata/wheel smoke.
+- Release publication now requires the local candidate HEAD to match remote `origin/main` using a read-only remote query.
+- Fixed wheel installation smoke so imports execute outside the source checkout.
+- Dry-run release messages now distinguish simulated tag/push/publication actions.
+- Updated project license metadata to the SPDX string form.
