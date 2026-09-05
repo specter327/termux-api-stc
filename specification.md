@@ -53,8 +53,9 @@ Parsing is explicit:
 - `.json()` performs explicit JSON parsing and raises `ProtocolError` on invalid
   JSON.
 
-The library does not auto-detect JSON and does not collapse empty stdout into
-`None`.
+The library does not auto-detect JSON. Raw execution preserves empty stdout as
+`b""`. Callers that explicitly choose `.json_if_present()` receive `None` only
+for a successful empty payload; `.json()` remains strict.
 
 ## 4. Command surface
 
@@ -71,7 +72,7 @@ Rich wrappers are only added after inspection of the corresponding upstream
 script. `termux_api_stc.contracts.INSPECTED_CONTRACTS` records the inspected
 source path and source SHA.
 
-## 5. 3.0.0a2 inspected expansion
+## 5. 3.1.0a2 inspected expansion
 
 The current expansion adds source-backed wrappers for:
 
@@ -137,3 +138,19 @@ official source
 
 Where observed runtime behavior disagrees with command source/documentation,
 the discrepancy must be recorded rather than silently normalized.
+
+
+## 8. Observation semantics
+
+Command availability and capability availability are separate concepts.
+
+```text
+binary present
+!= command succeeded
+!= payload produced
+!= hardware capability demonstrated
+```
+
+A successful empty payload is preserved as evidence and does not by itself
+justify `UNSUPPORTED` or `UNAVAILABLE`. Capability classification remains
+conservative until device evidence supports a stronger claim.

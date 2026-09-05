@@ -192,3 +192,14 @@ class Executor:
             return json.loads(self.text(result))
         except (UnicodeDecodeError, json.JSONDecodeError) as exc:
             raise ProtocolError(f"Invalid JSON from {result.argv[0]}") from exc
+
+    def json_if_present(self, result: ExecutionResult):
+        """Parse JSON only when stdout is non-empty.
+
+        A successful command may legitimately produce no payload on some
+        device/hardware combinations. Empty stdout is therefore represented
+        as None instead of being reclassified as a protocol failure.
+        """
+        if not result.stdout:
+            return None
+        return self.json(result)

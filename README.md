@@ -36,9 +36,10 @@ result = api["termux-battery-status"].json()
 ```
 
 Inspected commands additionally receive richer sync/async wrappers. Version
-`3.0.0a2` expands this surface with brightness, call log, contacts, infrared,
-sensors, SMS, toast, speech-to-text, storage picker, sharing, wallpaper,
-microphone recording and fingerprint authentication.
+`3.1.0a2` consolidates the evidence-first 3.1 line: explicit empty/non-empty
+payload state, conservative capability observation, richer Termux/Android
+environment reporting, notification and notification-channel support, and
+runtime/distribution version-consistency checks.
 
 ## Portable tests
 

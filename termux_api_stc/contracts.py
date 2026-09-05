@@ -89,4 +89,24 @@ INSPECTED_CONTRACTS: dict[str, UpstreamCommandContract] = {
         "ecb40b8e86365e8a0c5bef953c66bf59ab1f40cd",
         "Optional title/description/subtitle/cancel strings.",
     ),
+    "termux-notification-channel": UpstreamCommandContract(
+        "termux-notification-channel", "scripts/termux-notification-channel.in",
+        "1fa91d373b9b31884a8592d4c68b18624c663304",
+        "Create with channel-id channel-name; delete with -d channel-id.",
+    ),
+    "termux-notification-list": UpstreamCommandContract(
+        "termux-notification-list", "scripts/termux-notification-list.in",
+        "20151979edd975f27585999ec24adc289bba083b",
+        "No arguments; lists currently shown notifications.",
+    ),
+    "termux-notification-remove": UpstreamCommandContract(
+        "termux-notification-remove", "scripts/termux-notification-remove.in",
+        "62b1c9df6749461c4d973e4b4691f597dbd482cb",
+        "Requires exactly one notification id.",
+    ),
+    "termux-notification": UpstreamCommandContract(
+        "termux-notification", "scripts/termux-notification.in",
+        "61ee10b99e2f0e896644a0efa9a7c0f58de7deb2",
+        "Creates notification; content via -c/--content or stdin; rich optional metadata.",
+    ),
 }

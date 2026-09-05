@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "termux-api-stc"
-version = "3.0.0a2"
+dynamic = ["version"]
 description = "Strict Python consumer of the pinned official Termux:API command interface"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -23,6 +23,9 @@ Repository = "https://github.com/specter327/termux-api-stc"
 
 [project.optional-dependencies]
 test = ["pytest>=8", "pytest-asyncio>=0.23"]
+
+[tool.setuptools.dynamic]
+version = {attr = "termux_api_stc._version.__version__"}
 
 [tool.setuptools.packages.find]
 include = ["termux_api_stc*"]

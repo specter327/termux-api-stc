@@ -16,7 +16,7 @@ async def frequencies_async(*, timeout: float | None = 15.0) -> ExecutionResult:
 
 
 def frequencies_json(*, timeout: float | None = 15.0):
-    return _FREQ.json(timeout=timeout)
+    return _FREQ.json_if_present(timeout=timeout)
 
 
 def _pattern(value: str | Sequence[int]) -> str:
@@ -44,4 +44,4 @@ async def transmit_async(frequency_hz: int, pattern: str | Sequence[int], *, tim
     return await _TX.result_async("-f", str(frequency_hz), _pattern(pattern), timeout=timeout)
 
 async def frequencies_json_async(*, timeout: float | None = 15.0):
-    return await _FREQ.json_async(timeout=timeout)
+    return await _FREQ.json_if_present_async(timeout=timeout)

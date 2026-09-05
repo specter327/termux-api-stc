@@ -450,47 +450,31 @@ def bootstrap_if_needed(argv: Sequence[str], project_root: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def read_project_table(pyproject: Path) -> dict[str, str]:
+def read_project_table(pyproject: Path) -> dict[str, str | None]:
     text = pyproject.read_text(encoding="utf-8")
     match = re.search(r"(?ms)^\[project\]\s*(.*?)(?=^\[|\Z)", text)
     if not match:
         raise ReleaseError("pyproject.toml has no [project] table.")
-
     block = match.group(1)
 
-    def read_string(key: str) -> str:
-        hit = re.search(
-            rf'(?m)^\s*{re.escape(key)}\s*=\s*"([^"]+)"\s*$',
-            block,
-        )
-        if not hit:
-            raise ReleaseError(f"Missing [project].{key} in pyproject.toml.")
-        return hit.group(1)
+    def read_string(key: str) -> str | None:
+        hit = re.search(rf'(?m)^\s*{re.escape(key)}\s*=\s*"([^"]+)"\s*$', block)
+        return hit.group(1) if hit else None
 
     return {"name": read_string("name"), "version": read_string("version")}
 
 
-def read_init_version(init_file: Path) -> str | None:
-    if not init_file.is_file():
-        return None
-
-    tree = ast.parse(init_file.read_text(encoding="utf-8"))
-    for node in tree.body:
-        if isinstance(node, ast.Assign):
-            targets = node.targets
-            value = node.value
-        elif isinstance(node, ast.AnnAssign):
-            targets = [node.target]
-            value = node.value
-        else:
-            continue
-
-        if not any(isinstance(target, ast.Name) and target.id == "__version__" for target in targets):
-            continue
-
-        if isinstance(value, ast.Constant) and isinstance(value.value, str):
-            return value.value
-    return None
+def read_source_version(project_root: Path) -> str:
+    version_file = project_root / "termux_api_stc" / "_version.py"
+    if not version_file.is_file():
+        raise ReleaseError("Missing termux_api_stc/_version.py.")
+    match = re.search(
+        r'(?m)^__version__\s*=\s*"([^"]+)"\s*$',
+        version_file.read_text(encoding="utf-8"),
+    )
+    if not match:
+        raise ReleaseError("Unable to read __version__ from termux_api_stc/_version.py.")
+    return match.group(1)
 
 
 def load_metadata(config: Config) -> ProjectMetadata:
@@ -498,7 +482,7 @@ def load_metadata(config: Config) -> ProjectMetadata:
 
     project = read_project_table(config.project_root / "pyproject.toml")
     name = project["name"]
-    raw_version = project["version"]
+    raw_version = project["version"] or read_source_version(config.project_root)
 
     if name != EXPECTED_PROJECT_NAME:
         raise ReleaseError(
@@ -510,17 +494,10 @@ def load_metadata(config: Config) -> ProjectMetadata:
     except InvalidVersion as exc:
         raise ReleaseError(f"Invalid PEP 440 version {raw_version!r}: {exc}") from exc
 
-    init_version = read_init_version(config.project_root / "termux_api_stc" / "__init__.py")
-    if init_version is not None and init_version != raw_version:
-        raise ReleaseError(
-            "Version mismatch: "
-            f"pyproject.toml={raw_version!r}, termux_api_stc.__version__={init_version!r}"
-        )
-
     return ProjectMetadata(
         name=name,
         version=raw_version,
-        init_version=init_version,
+        init_version=raw_version,
         is_prerelease=parsed.is_prerelease,
     )
 

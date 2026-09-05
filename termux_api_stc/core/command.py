@@ -32,5 +32,12 @@ class Command:
     async def json_async(self, *args: str, input: bytes | None = None, timeout: float | None = None):
         return self.executor.json(await self.result_async(*args, input=input, timeout=timeout))
 
+
+    def json_if_present(self, *args: str, input: bytes | None = None, timeout: float | None = None):
+        return self.executor.json_if_present(self.result(*args, input=input, timeout=timeout))
+
+    async def json_if_present_async(self, *args: str, input: bytes | None = None, timeout: float | None = None):
+        return self.executor.json_if_present(await self.result_async(*args, input=input, timeout=timeout))
+
     def stream_lines(self, *args: str, startup_timeout: float | None = None) -> AsyncIterator[str]:
         return self.executor.stream_lines(self.binary, args, startup_timeout=startup_timeout)

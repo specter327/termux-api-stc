@@ -148,6 +148,39 @@ if ! "${PYTHON_EXECUTABLE}" -m pytest --version >/dev/null 2>&1; then
 fi
 
 ###############################################################################
+# Test environment preflight
+###############################################################################
+
+if ! "${PYTHON_EXECUTABLE}" -c 'import pytest_asyncio' >/dev/null 2>&1; then
+    echo "ERROR: pytest-asyncio is required for the async test suite."
+    echo "Install with: ${PYTHON_EXECUTABLE} -m pip install -e '.[test]'"
+    exit 125
+fi
+
+VERSION_PREFLIGHT="$(
+PYTHONPATH="${PROJECT_ROOT}${PYTHONPATH:+:${PYTHONPATH}}" "${PYTHON_EXECUTABLE}" - <<'PY'
+import importlib.metadata as md
+import termux_api_stc
+try:
+    installed = md.version("termux-api-stc")
+except md.PackageNotFoundError:
+    installed = None
+print(termux_api_stc.__version__)
+print(installed or "")
+PY
+)"
+RUNTIME_VERSION="$(printf '%s\n' "${VERSION_PREFLIGHT}" | sed -n '1p')"
+INSTALLED_VERSION="$(printf '%s\n' "${VERSION_PREFLIGHT}" | sed -n '2p')"
+
+if [[ -n "${INSTALLED_VERSION}" && "${INSTALLED_VERSION}" != "${RUNTIME_VERSION}" ]]; then
+    echo "ERROR: runtime/distribution version mismatch."
+    echo "runtime=${RUNTIME_VERSION}"
+    echo "distribution=${INSTALLED_VERSION}"
+    echo "Reinstall with: ${PYTHON_EXECUTABLE} -m pip install -e '.[test]'"
+    exit 124
+fi
+
+###############################################################################
 # Discovery
 ###############################################################################
 

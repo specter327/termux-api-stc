@@ -1,104 +1,109 @@
 #!/usr/bin/env python3
-"""
-termux-api-stc — Verification Console
-
-Verify a local termux-api-stc installation and/or source checkout.
-
-Checks:
-- selected Python interpreter
-- package importability
-- distribution metadata/version
-- import path
-- source checkout metadata, when present
-- pyproject/__version__/installed-version consistency
-- package files inventory
-- optional pip check
-- optional unit tests
-- optional Termux environment inspection
-- evidence generation with SHA256
-"""
+"""Verify a termux-api-stc checkout or installation and emit deterministic evidence."""
 
 from __future__ import annotations
 
 import argparse
-import dataclasses
-import datetime as dt
 import hashlib
-import importlib.util
+import importlib.metadata as metadata
 import json
 import os
-import re
-import shutil
 import subprocess
 import sys
-import venv
 from pathlib import Path
 
-APP_VERSION="1.0"
-BOOTSTRAP_MARKER="TERMUX_API_STC_VERIFY_BOOTSTRAPPED"
 
-RICH_AVAILABLE=False
+def root_from(start: Path) -> Path:
+    for candidate in (start, *start.parents):
+        if (candidate / "pyproject.toml").is_file() and (candidate / "termux_api_stc").is_dir():
+            return candidate
+    raise SystemExit("ERROR: project root not found")
+
+
+def sha256(path: Path) -> str:
+    h = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def run(argv: list[str], root: Path) -> tuple[int, str]:
+    cp = subprocess.run(argv, cwd=root, text=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+    return cp.returncode, cp.stdout
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--python", default=sys.executable)
+    parser.add_argument("--tests", action="store_true")
+    parser.add_argument("--output", default=".verification-results")
+    ns = parser.parse_args()
+
+    root = root_from(Path(__file__).resolve().parent)
+    out = root / ns.output
+    out.mkdir(parents=True, exist_ok=True)
+
+    code = r"""
+import json
+import importlib.metadata as md
+import termux_api_stc
+from termux_api_stc import inspect_environment
+
 try:
-    from rich import box
-    from rich.console import Console
-    from rich.panel import Panel
-    from rich.table import Table
-    from rich.text import Text
-    from rich.align import Align
-    from rich.traceback import install as rich_traceback_install
-    RICH_AVAILABLE=True
-    rich_traceback_install(show_locals=False)
-except Exception:
-    Console=None  # type: ignore
+    dist = md.version("termux-api-stc")
+except md.PackageNotFoundError:
+    dist = None
 
-class VerificationError(RuntimeError): pass
+r = inspect_environment()
+print(json.dumps({
+    "runtime_version": termux_api_stc.__version__,
+    "distribution_version": dist,
+    "import_path": termux_api_stc.__file__,
+    "is_termux": r.is_termux,
+    "android_release": r.android_release,
+    "android_sdk": r.android_sdk,
+    "termux_version": r.termux_version,
+    "termux_api_package_version": r.termux_api_package_version,
+    "official_command_count": len(r.commands),
+}, sort_keys=True))
+"""
+    cp = subprocess.run(
+        [ns.python, "-c", code],
+        cwd=root,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env={**os.environ, "PYTHONPATH": str(root)},
+    )
+    (out / "runtime.json").write_text(cp.stdout, encoding="utf-8")
+    (out / "runtime.stderr.txt").write_text(cp.stderr, encoding="utf-8")
+    if cp.returncode != 0:
+        (out / "status.txt").write_text("FAIL\n", encoding="utf-8")
+        return cp.returncode
 
-class UI:
-    def __init__(self,enabled=True):
-        self.enabled=enabled and RICH_AVAILABLE
-        self.console=Console() if self.enabled else None
-    def banner(self):
-        if self.enabled:
-            self.console.print(Panel(
-                Align.center(Text.assemble(
-                    Text("termux-api-stc",style="bold cyan"),"\n",
-                    Text("Verification Console",style="bold white"),"\n\n",
-                    Text("Installation integrity • metadata • environment",style="green")
-                )),border_style="cyan",box=box.ROUNDED))
-        else:
-            print("="*78); print("termux-api-stc — Verification Console"); print("="*78)
-    def section(self,t):
-        self.console.rule(f"[bold cyan]{t}[/bold cyan]") if self.enabled else print(f"\n{'='*78}\n{t}\n{'='*78}")
-    def ok(self,m): self.console.print(f"[green]✔[/green] {m}") if self.enabled else print(f"[ OK ] {m}")
-    def warn(self,m): self.console.print(f"[yellow]▲[/yellow] {m}") if self.enabled else print(f"[WARN] {m}",file=sys.stderr)
-    def fail(self,m): self.console.print(f"[bold red]✘ {m}[/bold red]") if self.enabled else print(f"[FAIL] {m}",file=sys.stderr)
-    def info(self,m): self.console.print(f"[cyan]●[/cyan] {m}") if self.enabled else print(f"[INFO] {m}")
-    def kv(self,rows):
-        if self.enabled:
-            t=Table(box=box.SIMPLE,show_header=False); t.add_column(style="bold"); t.add_column()
-            for k,v in rows:t.add_row(k,v)
-            self.console.print(t)
-        else:
-            w=max((len(k) for k,_ in rows),default=0)
-            for k,v in rows:print(f"{k:<{w}}  {v}")
+    data = json.loads(cp.stdout)
+    if data["distribution_version"] is not None and data["distribution_version"] != data["runtime_version"]:
+        (out / "status.txt").write_text("FAIL: version mismatch\n", encoding="utf-8")
+        return 4
 
-UI_INSTANCE:UI
+    rc = 0
+    if ns.tests:
+        rc, output = run([ns.python, "-m", "pytest", "-q", "tests/unit-test"], root)
+        (out / "tests.txt").write_text(output, encoding="utf-8")
 
-def detect_root(start):
-    for c in (start,*start.parents):
-        if (c/"pyproject.toml").is_file() and (c/"termux_api_stc").is_dir(): return c
-    return None
+    status = "PASS" if rc == 0 else "FAIL"
+    (out / "status.txt").write_text(status + "\n", encoding="utf-8")
 
-def bootstrap(argv,root):
-    if os.environ.get(BOOTSTRAP_MARKER)=="1" or "--no-bootstrap" in argv:return
-    if importlib.util.find_spec("rich") is not None:return
-    base=(root or Path.cwd())/".verification-tools"
-    py=base/("Scripts/python.exe" if os.name=="nt" else "bin/python")
-    print("[BOOT] Preparing isolated verification UI tools...")
-    if not py.exists(): venv.EnvBuilder(with_pip=True).create(base)
-    if subprocess.run([str(py),"-m","pip","install","--quiet","--upgrade","rich>=13.7"]).returncode!=0: raise SystemExit(1)
-    env=os.environ.copy();env[BOOTSTRAP_MARKER]="1"
-    os.execve(str(py),[str(py),str(Path(__file__).resolve()),*argv],env)
+    evidence = [p for p in out.iterdir() if p.is_file() and p.name != "SHA256SUMS"]
+    (out / "SHA256SUMS").write_text(
+        "".join(f"{sha256(p)}  {p.name}\n" for p in sorted(evidence)),
+        encoding="utf-8",
+    )
 
-def py_query(py:Path):
-    code=r
+    print(json.dumps({"status": status, "evidence": str(out)}, indent=2))
+    return rc
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

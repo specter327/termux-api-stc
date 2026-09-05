@@ -5,8 +5,10 @@ import subprocess
 
 import pytest
 
-from termux_api_stc import TermuxAPI
+from termux_api_stc import TermuxAPI, inspect_environment
 from termux_api_stc import audio, battery, call_log, contacts, location, sensor
+from termux_api_stc.capabilities import infrared as observe_infrared
+from termux_api_stc.core.models import CapabilityState
 
 pytestmark = [pytest.mark.device, pytest.mark.conformance]
 
@@ -53,3 +55,20 @@ def test_sensor_inventory_parseable():
     require("termux-sensor")
     value=sensor.list_available(timeout=30)
     assert isinstance(value, (list, dict))
+
+
+
+def test_environment_report_matches_termux():
+    report = inspect_environment()
+    assert report.is_termux
+    assert report.prefix
+    assert report.android_release
+    assert report.android_sdk
+    assert len(report.commands) == 57
+
+
+def test_infrared_capability_probe_is_conservative():
+    require("termux-infrared-frequencies")
+    observation = observe_infrared()
+    assert observation.command_available
+    assert observation.state in {CapabilityState.AVAILABLE, CapabilityState.UNKNOWN}

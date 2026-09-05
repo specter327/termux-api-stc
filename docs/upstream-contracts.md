@@ -4,7 +4,7 @@ This document records command scripts inspected directly from the pinned
 `termux/termux-api-package` baseline. Source identity is also encoded in
 `termux_api_stc.contracts.INSPECTED_CONTRACTS`.
 
-## Newly implemented in 3.0.0a2
+## Inspected in the current 3.x line
 
 | Command | Upstream source | SHA |
 |---|---|---|
@@ -23,6 +23,10 @@ This document records command scripts inspected directly from the pinned
 | `termux-wallpaper` | `scripts/termux-wallpaper.in` | `247bc725e0dfb8ba9651f1da76bded85b0288aef` |
 | `termux-microphone-record` | `scripts/termux-microphone-record.in` | `2cb7b3999096cce25a5dee75b4c2820a011eebc0` |
 | `termux-fingerprint` | `scripts/termux-fingerprint.in` | `ecb40b8e86365e8a0c5bef953c66bf59ab1f40cd` |
+| `termux-notification` | `scripts/termux-notification.in` | `61ee10b99e2f0e896644a0efa9a7c0f58de7deb2` |
+| `termux-notification-channel` | `scripts/termux-notification-channel.in` | `1fa91d373b9b31884a8592d4c68b18624c663304` |
+| `termux-notification-list` | `scripts/termux-notification-list.in` | `20151979edd975f27585999ec24adc289bba083b` |
+| `termux-notification-remove` | `scripts/termux-notification-remove.in` | `62b1c9df6749461c4d973e4b4691f597dbd482cb` |
 
 ## Rule
 
@@ -30,3 +34,6 @@ Where the upstream shell script establishes argument validation, the wrapper
 models that contract. Where the script does not establish a stdout schema,
 the default high-level operation returns `ExecutionResult`; parsing is exposed
 separately only when explicitly selected.
+
+A successful empty stdout is preserved as an observation. It is not silently
+converted into a hardware-support claim.
