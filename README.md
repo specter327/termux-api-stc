@@ -11,6 +11,7 @@ Python  →  TermuxAPI-stc  →  official termux-* CLI  →  Termux:API  →  An
 ```
 
 `pip install termux-api-stc`
+`https://pypi.org/project/termux-api-stc/`
 
 **Current release:** `3.1.0a5` · **Python:** `3.10+` · **License:** `MIT`
 
