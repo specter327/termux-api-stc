@@ -1,17 +1,28 @@
 <div align="center">
 
+<img
+src="docs/assets/termuxapi-stc-hero.png"
+alt="TermuxAPI-stc — Python to Termux:API on Android"
+width="100%"
+/>
+
 # TermuxAPI-stc
 
 ### A strict Python interface to the official Termux:API command layer.
 
-**Source-backed contracts · Explicit execution · Async support · Real-device conformance**
+**Source-backed contracts · Explicit execution · Async support · Streaming · Real-device conformance**
 
-```text
-Python  →  TermuxAPI-stc  →  official termux-* CLI  →  Termux:API  →  Android
+<br>
+
+[![PyPI](https://img.shields.io/pypi/v/termux-api-stc?label=PyPI\&logo=pypi)](https://pypi.org/project/termux-api-stc/)
+[![Python](https://img.shields.io/pypi/pyversions/termux-api-stc?logo=python)](https://pypi.org/project/termux-api-stc/)
+[![License](https://img.shields.io/pypi/l/termux-api-stc)](LICENSE)
+
+<br>
+
+```bash
+pip install termux-api-stc
 ```
-
-`pip install termux-api-stc`
-`https://pypi.org/project/termux-api-stc/`
 
 **Current release:** `3.1.0a5` · **Python:** `3.10+` · **License:** `MIT`
 
@@ -19,25 +30,9 @@ Python  →  TermuxAPI-stc  →  official termux-* CLI  →  Termux:API  →  An
 
 ---
 
-## Android capabilities, without making the CLI your application architecture
+## Python above. Android below. A strict boundary in between.
 
-Termux:API provides an unusually useful bridge between the Termux environment and Android:
-
-* battery information;
-* cameras;
-* location;
-* sensors;
-* SMS;
-* telephony;
-* microphone;
-* notifications;
-* clipboard;
-* storage;
-* Wi-Fi;
-* audio;
-* and other device capabilities.
-
-Its public integration boundary is largely a collection of executable commands:
+Termux:API exposes Android capabilities to the Termux environment through official command-line programs such as:
 
 ```bash
 termux-battery-status
@@ -48,90 +43,113 @@ termux-sms-list
 termux-volume
 ```
 
-Those commands work well interactively.
+Calling one of those commands from Python is trivial.
 
-A Python application, however, needs more than command strings.
+Building reliable software around them is not.
 
-It needs a predictable boundary for:
+A real integration has to reason about:
 
-```text
-arguments
-stdin / stdout / stderr
-return codes
-timeouts
-process lifetime
-JSON parsing
-empty responses
-async execution
-streams
-missing commands
-hardware absence
-permissions
-semantic failures
-```
+* exact arguments;
+* stdin;
+* stdout;
+* stderr;
+* return codes;
+* timeouts;
+* subprocess lifetime;
+* strict parsing;
+* empty payloads;
+* asynchronous execution;
+* streaming;
+* missing commands;
+* hardware absence;
+* Android permissions;
+* semantic failures.
 
 **TermuxAPI-stc provides that boundary.**
+
+```text
+Python application
+        │
+        ▼
+   TermuxAPI-stc
+        │
+        ▼
+official termux-* CLI
+        │
+        ▼
+    Termux:API
+        │
+        ▼
+      Android
+```
+
+It does not replace Termux:API.
+
+It consumes its official command interface in a controlled, explicit and testable way.
 
 ---
 
 # At a glance
 
-|                                  | TermuxAPI-stc                                                  |
-| -------------------------------- | -------------------------------------------------------------- |
-| **Purpose**                      | Consume the official Termux:API CLI from Python                |
-| **Abstraction**                  | Strict execution layer + source-backed higher-level interfaces |
-| **Official command baseline**    | 57 commands                                                    |
-| **Inspected upstream contracts** | 19                                                             |
-| **Execution**                    | Sync, async and streaming                                      |
-| **Parsing**                      | Bytes, strict UTF-8 text, JSON, optional JSON                  |
-| **Shell execution**              | No                                                             |
-| **Environment inspection**       | Yes                                                            |
-| **Capability observation**       | Conservative / evidence-oriented                               |
-| **Portable qualification**       | 227 tests                                                      |
-| **Real Android qualification**   | Yes                                                            |
-| **Python**                       | 3.10+                                                          |
-| **License**                      | MIT                                                            |
+|                                  | TermuxAPI-stc                                                |
+| -------------------------------- | ------------------------------------------------------------ |
+| **Purpose**                      | Consume the official Termux:API CLI from Python              |
+| **Model**                        | Strict execution layer + source-backed high-level interfaces |
+| **Official command baseline**    | **57 commands**                                              |
+| **Inspected upstream contracts** | **19**                                                       |
+| **Portable test suite**          | **227 tests**                                                |
+| **Execution**                    | Sync, async and streaming                                    |
+| **Parsing**                      | Bytes, strict UTF-8, JSON, optional JSON                     |
+| **Shell execution**              | **No**                                                       |
+| **Environment inspection**       | Yes                                                          |
+| **Capability observation**       | Conservative and evidence-oriented                           |
+| **Real Android qualification**   | Yes                                                          |
+| **Python**                       | 3.10–3.14 tested                                             |
+| **License**                      | MIT                                                          |
 
 ---
 
-# Design
+# Why this exists
 
-TermuxAPI-stc is deliberately positioned between an application and the official command interface.
+A direct call looks simple:
 
-```text
-┌─────────────────────────────────────────────┐
-│              Python application             │
-│                                             │
-│  automation · services · agents · tooling   │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│                TermuxAPI-stc                │
-│                                             │
-│  contracts · execution · parsing · async    │
-│  streams · errors · environment evidence    │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│          official termux-* commands         │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│                  Termux:API                 │
-└──────────────────────┬──────────────────────┘
-                       │
-                       ▼
-┌─────────────────────────────────────────────┐
-│                    Android                  │
-└─────────────────────────────────────────────┘
+```python
+import subprocess
+
+subprocess.run(["termux-battery-status"])
 ```
 
-The library does not replace any layer below it.
+But once that command becomes infrastructure inside an application, several questions appear immediately:
 
-It gives Python software a controlled interface to them.
+```text
+What arguments are valid?
+What happens if stdout is empty?
+What if JSON is malformed?
+What if the command is missing?
+What if the process hangs?
+What if Android returns rc=0 but reports no hardware?
+What if the capability exists but permission is missing?
+What happens during async cancellation?
+How should streaming commands be consumed?
+```
+
+TermuxAPI-stc makes those concerns part of the API contract instead of leaving them scattered across application code.
+
+Its development model is intentionally evidence-driven:
+
+```text
+Official upstream source
+        ↓
+Normative contract
+        ↓
+Observed behavior
+        ↓
+Test
+        ↓
+STC implementation
+        ↓
+Conformance evidence
+```
 
 ---
 
@@ -141,19 +159,19 @@ It gives Python software a controlled interface to them.
 pip install termux-api-stc
 ```
 
-Current alpha:
+Current alpha explicitly:
 
 ```bash
 pip install termux-api-stc==3.1.0a5
 ```
 
-For real Android operations you also need a functioning Termux environment with the official Termux:API components installed.
+For real Android operations, the environment also requires a functioning Termux setup with the official Termux:API components installed.
 
 ---
 
-# Start with the high-level API
+# Quick start
 
-## Battery
+## Battery status
 
 ```python
 from termux_api_stc import battery
@@ -192,7 +210,7 @@ Android still determines whether:
 
 * a camera exists;
 * access is permitted;
-* the requested camera ID is valid;
+* the camera ID is valid;
 * the operation can actually complete.
 
 ---
@@ -210,7 +228,7 @@ position = location.get(
 print(position)
 ```
 
-Inspected provider values:
+Inspected providers:
 
 ```text
 gps
@@ -227,9 +245,7 @@ last
 
 ---
 
-## Continuous location updates
-
-Continuous upstream behavior remains continuous at the Python boundary:
+## Streaming location updates
 
 ```python
 from termux_api_stc import location
@@ -238,11 +254,13 @@ for update in location.stream_updates(provider="gps"):
     print(update)
 ```
 
-TermuxAPI-stc does not silently convert an upstream stream into polling.
+Continuous upstream behavior remains continuous.
+
+TermuxAPI-stc does not silently transform a stream into polling.
 
 ---
 
-# Async where process lifecycle matters
+# Async execution
 
 ```python
 import asyncio
@@ -260,13 +278,15 @@ asyncio.run(main())
 
 Async support uses asynchronous subprocess management.
 
-It is not implemented by simply hiding synchronous execution behind a convenience function.
+It is not merely synchronous execution hidden behind an async-looking wrapper.
 
 ---
 
-# Need the official command directly?
+# Raw official command facade
 
-Use the raw facade.
+Not every official command needs a specialized high-level abstraction.
+
+The complete pinned command inventory remains accessible:
 
 ```python
 from termux_api_stc import TermuxAPI
@@ -278,8 +298,6 @@ result = api["termux-battery-status"].json()
 print(result)
 ```
 
-This gives access to the complete pinned official command inventory even where no specialized wrapper has been defined.
-
 Unknown commands are rejected:
 
 ```python
@@ -287,15 +305,13 @@ api["not-an-official-termux-command"]
 # KeyError
 ```
 
-That restriction is intentional.
+This is deliberate.
 
-The raw facade represents a known official baseline, not an arbitrary command executor.
+The raw facade represents the known official command baseline, not arbitrary command execution.
 
 ---
 
-# Two surfaces, one boundary
-
-TermuxAPI-stc intentionally provides two different levels of access.
+# Two surfaces, one execution boundary
 
 ```text
                     TermuxAPI-stc
@@ -318,14 +334,14 @@ TermuxAPI-stc intentionally provides two different levels of access.
                 official termux-* CLI
 ```
 
-This prevents a false tradeoff between:
+This avoids a false tradeoff between:
 
-* exposing the complete official surface; and
-* pretending every command already has a fully inspected rich contract.
+* exposing the complete official command surface; and
+* pretending every command already has a rich, fully inspected wrapper.
 
 ---
 
-# Explicit execution semantics
+# Execution model
 
 At the core:
 
@@ -347,7 +363,7 @@ shell = false
 
 There is no intermediate shell interpretation.
 
-Execution can preserve:
+Each execution can preserve:
 
 ```text
 argv
@@ -361,9 +377,11 @@ through `ExecutionResult`.
 
 ---
 
-# Parsing is never guessed
+# Parsing is explicit
 
-A command result can be requested explicitly as:
+TermuxAPI-stc does not guess what stdout means.
+
+The caller selects the representation:
 
 ```python
 command.bytes()
@@ -372,35 +390,37 @@ command.json()
 command.json_if_present()
 ```
 
-### Bytes
+## Bytes
 
 ```python
 payload = command.bytes()
 ```
 
-Raw stdout.
+Returns raw stdout.
 
 ---
 
-### Text
+## Text
 
 ```python
 text = command.text()
 ```
 
-Strict UTF-8.
+Uses strict UTF-8 decoding.
 
-Invalid encoding does not get silently repaired into a different result.
+Invalid text is not silently repaired into another representation.
 
 ---
 
-### JSON
+## JSON
 
 ```python
 data = command.json()
 ```
 
-Non-empty malformed JSON raises:
+Requires valid JSON.
+
+Malformed non-empty JSON raises:
 
 ```python
 ProtocolError
@@ -408,9 +428,9 @@ ProtocolError
 
 ---
 
-### Optional JSON
+## Optional JSON
 
-Some successful commands can legitimately emit nothing.
+Some successful official commands can legitimately emit no stdout.
 
 ```python
 data = command.json_if_present()
@@ -438,7 +458,7 @@ No implicit fallback.
 
 # Process success is not capability success
 
-One of the central rules of TermuxAPI-stc is:
+A core rule of TermuxAPI-stc is:
 
 ```text
 command exists
@@ -462,11 +482,23 @@ hardware exists
 permission granted
 ```
 
-This matters on Android.
+This distinction matters on Android.
 
-A process can successfully communicate with Termux:API while the returned payload reports, for example, that the requested hardware does not exist.
+A process can return:
 
-TermuxAPI-stc does not erase that distinction.
+```text
+rc = 0
+```
+
+while its payload reports:
+
+```text
+ERROR_NO_HARDWARE
+```
+
+That is not the same thing as a working capability.
+
+TermuxAPI-stc preserves the difference.
 
 ---
 
@@ -493,7 +525,7 @@ UNSUPPORTED
 UNKNOWN
 ```
 
-The model is deliberately conservative.
+Observation is intentionally conservative.
 
 For example:
 
@@ -508,11 +540,11 @@ does not automatically prove:
 AVAILABLE
 ```
 
-if useful output is required to establish that conclusion.
+when positive payload evidence would be required for that claim.
 
 ---
 
-# Know the environment you are running in
+# Environment inspection
 
 ```python
 from termux_api_stc import inspect_environment
@@ -550,17 +582,17 @@ That distinction is preserved throughout the library.
 
 ---
 
-# High-level capability areas
+# Capability surface
 
 TermuxAPI-stc currently exposes structured interfaces across areas including:
 
 | Capability                | Interface examples                         |
 | ------------------------- | ------------------------------------------ |
 | **Battery**               | status                                     |
-| **Audio**                 | device audio information                   |
-| **Volume**                | inspect and modify audio streams           |
+| **Audio**                 | audio information                          |
+| **Volume**                | inspect and modify streams                 |
 | **Brightness**            | display brightness                         |
-| **Camera**                | camera information, capture                |
+| **Camera**                | information, photo capture                 |
 | **Clipboard**             | read, write                                |
 | **Contacts**              | list                                       |
 | **Calls**                 | call log                                   |
@@ -568,7 +600,7 @@ TermuxAPI-stc currently exposes structured interfaces across areas including:
 | **Sensors**               | list, read, continuous output              |
 | **Microphone**            | recording lifecycle                        |
 | **Fingerprint**           | authentication request                     |
-| **Infrared**              | frequency inspection, transmission         |
+| **Infrared**              | frequencies, transmission                  |
 | **Notifications**         | create, list, remove                       |
 | **Notification channels** | create, remove                             |
 | **SMS**                   | list, send                                 |
@@ -583,15 +615,27 @@ TermuxAPI-stc currently exposes structured interfaces across areas including:
 | **Wallpaper**             | local file or URL                          |
 | **Wi-Fi**                 | connection, scan information, enable state |
 
-This is a library surface description.
+This table describes the library surface.
 
-It is **not** a claim that every listed Android capability exists or is usable on every device.
+It is **not** a claim that every listed capability is usable on every Android device.
+
+Actual behavior can depend on:
+
+```text
+Android API level
+permissions
+hardware
+device manufacturer
+Termux configuration
+current device state
+user interaction
+```
 
 ---
 
 # Source-backed contracts
 
-A rich wrapper should not exist because an API shape seemed convenient.
+A high-level wrapper should not exist merely because an API shape looks convenient.
 
 For inspected commands, TermuxAPI-stc records upstream evidence.
 
@@ -602,33 +646,25 @@ for command, contract in INSPECTED_CONTRACTS.items():
     print(command, contract)
 ```
 
-The current 3.1 line distinguishes:
+The current 3.1 line distinguishes two separate surfaces:
 
 ```text
-57
-official commands in the pinned raw inventory
+57 official commands
+        │
+        └── pinned raw inventory
 
-19
-source-identified upstream contracts inspected for richer modeling
+19 inspected upstream contracts
+        │
+        └── stronger high-level modeling
 ```
 
-These are intentionally separate numbers.
-
-```text
-official inventory
-        ↓
-raw accessibility
-
-inspected contract
-        ↓
-stronger high-level modeling
-```
+These numbers intentionally mean different things.
 
 ---
 
-# Upstream baseline
+# Official baseline
 
-The 3.1 line was developed against a pinned official baseline.
+The 3.1 line was developed against a pinned upstream baseline:
 
 ```text
 Termux:API
@@ -642,7 +678,9 @@ official command inventory:
 57
 ```
 
-The pinned identifier is a **package tree SHA**, not a claim that it is the repository commit SHA.
+The identifier above is a **package tree SHA**.
+
+It is not described as the repository commit SHA.
 
 ---
 
@@ -657,31 +695,31 @@ from termux_api_stc import (
 )
 ```
 
-### `CommandUnavailableError`
+## `CommandUnavailableError`
 
-The executable cannot be found.
+The requested executable cannot be found.
 
 ---
 
-### `ExecutionError`
+## `ExecutionError`
 
 The executable ran but returned a non-zero status.
 
-Its execution evidence is preserved.
+Execution evidence is preserved.
 
 ---
 
-### `ExecutionTimeoutError`
+## `ExecutionTimeoutError`
 
 The process exceeded its configured timeout.
 
 ---
 
-### `ProtocolError`
+## `ProtocolError`
 
-The selected parser received a non-empty payload that violated the expected representation.
+A selected parser received a non-empty payload that violated the expected representation.
 
-For example:
+Example:
 
 ```text
 expected JSON
@@ -690,9 +728,9 @@ received malformed non-empty output
 
 ---
 
-## Android semantic errors are different
+# Android semantic failures are different
 
-Not every Android failure is an execution failure.
+Not every Android-level problem is an execution failure.
 
 For example:
 
@@ -711,47 +749,43 @@ process
     rc != 0
 ```
 
-TermuxAPI-stc preserves that information rather than collapsing both into the same exception.
+TermuxAPI-stc does not collapse both situations into the same error model.
 
 ---
 
 # Validation is layered
 
-A portable Python test and a real Android operation answer different questions.
-
-TermuxAPI-stc treats them separately.
+Portable Python tests and real-device tests answer different questions.
 
 ```text
-┌──────────────────────┐
-│ Portable validation  │
-└──────────┬───────────┘
-           │
-           │ validates
-           ▼
- Python contracts
+┌──────────────────────────┐
+│   Portable validation    │
+└────────────┬─────────────┘
+             │
+             ▼
  argv construction
  parsing
  errors
- async lifecycle
+ sync execution
+ async execution
  timeout behavior
  subprocess cleanup
  streaming
  registries
 
 
-┌──────────────────────┐
-│ Device conformance   │
-└──────────┬───────────┘
-           │
-           │ validates
-           ▼
- STC
-   ↓
+┌──────────────────────────┐
+│   Device conformance     │
+└────────────┬─────────────┘
+             │
+             ▼
+ TermuxAPI-stc
+      ↓
  official CLI
-   ↓
+      ↓
  Termux:API
-   ↓
- actual Android device
+      ↓
+ real Android device
 ```
 
 Passing the first does not imply passing the second.
@@ -759,8 +793,6 @@ Passing the first does not imply passing the second.
 ---
 
 # `3.1.0a5` qualification snapshot
-
-The current alpha was validated through multiple layers.
 
 | Qualification                       |             Result |
 | ----------------------------------- | -----------------: |
@@ -773,22 +805,20 @@ The current alpha was validated through multiple layers.
 | Android readonly                    |   **19 / 19 PASS** |
 | Android safe-effects                |   **10 / 10 PASS** |
 | Android qualification               |   **29 / 29 PASS** |
-| Installed wheel qualification       |   **29 / 29 PASS** |
+| Installed-wheel qualification       |   **29 / 29 PASS** |
 | Repeated installed qualification    |   **29 / 29 PASS** |
 | Clean PyPI installation             |           **PASS** |
 | `pip check` after PyPI installation |           **PASS** |
 
-Real-device qualification was performed against a defined reference environment.
-
-These results are evidence for the tested configuration.
+These results are evidence for the tested release and reference environment.
 
 They are **not a universal Android compatibility claim**.
 
 ---
 
-# Device tests are risk-separated
+# Real-device qualification
 
-Android tests are grouped according to what they actually do.
+Device campaigns are separated according to operational effect:
 
 ```text
 readonly
@@ -798,7 +828,9 @@ interactive
 sensitive
 ```
 
-This matters because testing:
+This is intentional.
+
+Testing:
 
 ```text
 battery status
@@ -814,15 +846,13 @@ sharing
 biometrics
 ```
 
-Potentially interactive or externally visible operations are not silently hidden inside ordinary test execution.
+Interactive and externally visible actions are not silently hidden inside ordinary automated campaigns.
 
 ---
 
-# Designed for software above it
+# Designed as infrastructure
 
-TermuxAPI-stc deliberately stops at the Android command boundary.
-
-That makes it suitable as a dependency for larger systems.
+TermuxAPI-stc is intentionally narrow enough to be used beneath larger software systems.
 
 ```text
 ┌───────────────────────────────────────┐
@@ -833,11 +863,11 @@ That makes it suitable as a dependency for larger systems.
 │ RPC                                   │
 │ persistence                           │
 │ business logic                        │
-│ UI                                    │
+│ user interface                        │
 ├───────────────────────────────────────┤
 │             TermuxAPI-stc             │
 ├───────────────────────────────────────┤
-│ argument contracts                    │
+│ command contracts                     │
 │ subprocess execution                  │
 │ parsing                               │
 │ async lifecycle                       │
@@ -850,11 +880,11 @@ That makes it suitable as a dependency for larger systems.
 └───────────────────────────────────────┘
 ```
 
-TermuxAPI-stc does not absorb concerns that belong to the application consuming it.
+Application concerns remain outside the library.
 
 ---
 
-# What the library intentionally does not do
+# What TermuxAPI-stc does not claim
 
 TermuxAPI-stc is not:
 
@@ -863,24 +893,23 @@ TermuxAPI-stc is not:
 * a replacement for Termux;
 * a replacement for Termux:API;
 * a replacement for `termux-api-package`;
-* a private Android Intent/Binder implementation;
+* a private Binder or Intent integration;
 * a remote administration protocol;
 * an authorization system;
 * a permission manager;
 * a device compatibility database;
-* a guarantee that hardware exists;
+* a guarantee that particular hardware exists;
 * a guarantee that Android will grant a permission;
+* a universal compatibility claim across Android vendors;
 * a normalization layer that fabricates consistent semantics where upstream does not provide them.
 
-Its job is narrower:
+Its responsibility is narrower:
 
 > **Provide a strict Python boundary around the official Termux:API command interface.**
 
 ---
 
-# Runtime requirements
-
-Actual Android operations generally require:
+# Runtime stack
 
 ```text
 Android
@@ -896,22 +925,22 @@ Python 3.10+
 TermuxAPI-stc
 ```
 
-Specific operations can additionally depend on:
+Individual operations can additionally depend on:
 
 ```text
-Android API level
-permissions
 hardware
+permissions
+Android API level
 manufacturer behavior
 user interaction
-current device state
+runtime state
 ```
 
 ---
 
 # Development
 
-Install the project with test dependencies:
+Install with test dependencies:
 
 ```bash
 python -m pip install -e '.[test]'
@@ -923,7 +952,7 @@ Run the portable suite:
 ./tests/run-tests.sh
 ```
 
-Real Termux environment:
+Run real-device campaigns in Termux:
 
 ```bash
 ./tests/run-device-tests.sh readonly
@@ -950,18 +979,24 @@ docs/upstream-contracts.md
 tests/device/README.md
 ```
 
-These documents describe the qualification model, upstream evidence and evolution of the 3.x contract surface.
+These documents describe:
+
+* qualification rules;
+* evidence semantics;
+* source-backed contracts;
+* device-test methodology;
+* release evolution.
 
 ---
 
 # Package identity
 
-| Context                  | Name             |
-| ------------------------ | ---------------- |
-| **Project presentation** | `TermuxAPI-stc`  |
-| **PyPI distribution**    | `termux-api-stc` |
-| **Python import**        | `termux_api_stc` |
-| **Current version**      | `3.1.0a5`        |
+| Context               | Name             |
+| --------------------- | ---------------- |
+| **Presentation name** | `TermuxAPI-stc`  |
+| **PyPI distribution** | `termux-api-stc` |
+| **Python import**     | `termux_api_stc` |
+| **Current release**   | `3.1.0a5`        |
 
 Install:
 
@@ -984,17 +1019,15 @@ import termux_api_stc
 ALPHA
 ```
 
-The alpha label is deliberate.
+The alpha designation is intentional.
 
-The release has substantial automated and real-device qualification, but the richer source-backed API surface is still evolving.
+The release has substantial automated and real-device qualification, while the richer source-backed high-level contract surface is still evolving.
 
 A qualified reference device does not justify claiming universal Android behavior.
 
 ---
 
-# Philosophy
-
-TermuxAPI-stc follows a simple rule:
+# Engineering philosophy
 
 ```text
 NO SPECIFICATION
@@ -1020,14 +1053,14 @@ When neither exists, the library should not invent certainty.
 
 <div align="center">
 
-## TermuxAPI-stc
+# TermuxAPI-stc
 
-**Python above. Android below. A strict boundary in between.**
+### Python above. Android below. A strict boundary in between.
 
 ```bash
 pip install termux-api-stc
 ```
 
-MIT Licensed · Python 3.10+
+**Open source · PyPI · MIT · Python 3.10+**
 
 </div>
